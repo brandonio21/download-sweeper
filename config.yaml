@@ -1,0 +1,24 @@
+# Functionality enable settings
+archive_downloads:  true
+purge_archives:     true
+compress_archives:  true
+shred_when_purging: true
+
+# Transfer settings
+move_to_all_archive_dirs:   true # If false, will only move to the first archive dir
+compress_all_archive_dirs:  true # If false, will only compress the first archive dir
+move_to_all_purge_dirs:     true # If false, will only move to the first purge dir
+delete_from_all_purge_dirs: true # If false, will only delete from the first purge dir
+
+# Time limit configuration settings
+download_stale_after: "30d"
+archive_stale_after: "30d"
+purge_stale_after: "1d"
+
+# Directory configuraiton settings
+download_directories:
+        - "/home/brandon/Downloads/"
+archive_directores:
+        - "/home/brandon/.download-archive/"
+purge_directores:
+        - "/home/brandon/.download-purge/"
