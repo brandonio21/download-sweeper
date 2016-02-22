@@ -9,15 +9,15 @@ The Three-Tier Model
 --------------------
 download-sweeper considers downloads to be organized in three tiers:
 
- 	1. The Download Tier: Files that are freshly downloaded or accessed
-	                      repeatedly from their downloaded location.
+1. The Download Tier: Files that are freshly downloaded or accessed
+		      repeatedly from their downloaded location.
 
-	2. The Archive Tier : Files that were downloaded long ago and not 
-	                      recently accessed but still may be accessed in the
-			      future. By default, these files are compressed.
+2. The Archive Tier : Files that were downloaded long ago and not 
+		      recently accessed but still may be accessed in the
+		      future. By default, these files are compressed.
 
-	3. The Purge Tier   : These files are ready to be deleted and are 
-	 		      are considered to be never used. 
+3. The Purge Tier   : These files are ready to be deleted and are 
+		      are considered to be never used. 
 
 
 
