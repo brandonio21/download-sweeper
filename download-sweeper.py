@@ -11,7 +11,13 @@
 import argparse
 import yaml
 
+# Setup the commandline arguments
+argParser = argparse.ArgumentParser(description="Manage old downloaded files")
+argParser.add_argument('--config', default='config.yaml', 
+                       help='The location of the configuration file to load')
 
+class ConfigurationManager:
+    
 
 
 if __name__ == "__main__":
