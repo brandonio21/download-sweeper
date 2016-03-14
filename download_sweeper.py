@@ -10,6 +10,10 @@
 ################################################################################
 import argparse
 import yaml
+import os
+import re
+import time
+from datetime import datetime, timedelta
 
 # Setup the commandline arguments
 argParser = argparse.ArgumentParser(description="Manage old downloaded files")
@@ -52,18 +56,115 @@ shredWhenPurgingGrp.add_argument('--no-shred',default=argparse.SUPPRESS,
                       help='Do not shred files when deleting them',
                       action='store_false',dest='shred_when_purging')
 
-                       
+class ConfigKeyTranslator(object):
+    DOWNLOADS = 0
+    ARCHIVES = 1
+    PURGES = 2
+    _translation_list = [
+         ('download_stale_after', 'download_directories'),
+         ('archive_stale_after','archive_directores'     ),
+         ('purge_stale_after', 'purge_directores'        ) ]
+
+    def __init__(self, configType):
+        self.stale_limit_key, self.path_key = self._translation_list[configType]
+        
+
+"""
+class TrackedFileType(object):
+    ARCHIVED = 0
+    PURGE = 1
+
+class TrackedFileFactory(object):
+
+    def __init__(self, trackedFileType):
+        self.trackedFileType = trackedFileType
+
+    def create_new_tracked_file(self):
+
+class ArchivedTrackFile(TrackedFile):
+
+class PurgeTrackFile(TrackedFile):
+
+class TrackedFile(object):
+    A class that keeps track of the files that are scanned and then moved to
+    the archive or purge directories
+    def __init__(self):
+    """
+
+class ConfigFileTimeDeltaParser(object):
+    DAYS_KEY = "d"
+    WEEKS_KEY = "w"
+    re_pattern = re.compile('^(\d+)([a-z])$')
+
+    class InvalidConfigTimeStrException(Exception): pass
+    class InvalidConfigTimeKeyException(Exception): pass
+
+    @classmethod
+    def _translate_key_to_deltakey_dict(cls, key, value):
+        translation_dict = {'d' : 'days', 'w': 'weeks'}
+        if not key in translation_dict:
+            raise InvalidConfigTimeKeyException(
+                    '{} is an invalid key'.format(key))
+        return {translation_dict[key] : int(value)}
+
+    @classmethod
+    def get_timedelta_from_config_str(cls,configStr):
+        matchedPattern = cls.re_pattern.match(configStr)
+        if matchedPattern is None or not len(matchedPattern.groups()) == 2:
+            raise cls.InvalidConfigTimeStrException(
+                    '{} is an invalid time str'.format(configStr))
+
+        return timedelta(
+                **cls._translate_key_to_deltakey_dict(
+                    matchedPattern.group(2), matchedPattern.group(1)))
+
+class Sweeper(object):
+    """ An object used to sweep certain directories and move their stale 
+    contents to the next directory """
+
+    def __init__(self, configManager):
+        """ Inititalizes the Sweeper with a certain set of configurations """
+        self.configManager = configManager
+
+
+    def get_stale_file_paths(self, configTranslator):
+        """ 
+        Gets the paths of all stale files in the certain type of directory.
+
+        Arguments:
+        pathType: str - A member of ConfigKeyTranslator that determines which
+                        directory we will be searching
+        """
+        stalePaths = []
+        for directoryPath in self.configManager.get_option_value(
+                configTranslator.path_key):
+            for root, dirs, files in os.walk(directoryPath):
+                for file in files:
+                    fullFilePath       = os.path.join(root, file)
+                    lastAccessCDate    = os.lstat(fullFilePath).st_atime
+                    lastAccessDatetime = datetime.strptime(
+                            time.ctime(lastAccessCDate), "%a %b %d %H:%M:%S %Y")
+                    adjLastAccessTime = (lastAccessDatetime +
+                            ConfigFileTimeDeltaParser.get_timedelta_from_config_str(
+                                self.configManager.get_option_value(
+                                    configTranslator.stale_limit_key)))
+
+                    if adjLastAccessTime < datetime.today():
+                        stalePaths.append(fullFilePath)
+
+        return stalePaths
 
 class ConfigurationManager(object):
     class ConfigurationException(Exception): pass
 
     """ An object used to manage the download-sweeper configuration file
     and retrieve specific settings"""
-    def __init__(self, configPath, loadFile=True):
+    def __init__(self, configPath, argNamespace, loadFile=True):
         """ Create the configuration manager and load the specified data from
         the file if loadFile is true """
         self.config_file_path = configPath
         self.config_file_dict = {}
+        self.argNamespace = argNamespace
 
         if loadFile:
             self.load_config_file()
@@ -84,11 +185,17 @@ class ConfigurationManager(object):
         with open(self.config_file_path, 'r') as openConfigFile:
             self.config_file_dict = yaml.load(openConfigFile.read())
 
-    def get_option_value(self, argNamespace, key):
+    def get_option_value(self, key):
         """ Returns the value of the provided option key. The values stored in
         commandline args take precedence over config file """
-        argDictionary = vars(argNamespace)
+        argDictionary = vars(self.argNamespace)
         return (argDictionary[key] if key in argDictionary else 
                 self.config_file_dict[key])
 
-#if __name__ == "__main__":
+if __name__ == "__main__":
+    a = argparse.ArgumentParser()
+    b = a.parse_args([])
+    c = ConfigurationManager('config.yaml',b)
+    cf = ConfigKeyTranslator(ConfigKeyTranslator.DOWNLOADS)
+    s = Sweeper(c)
+    print(s.get_stale_file_paths(cf))
