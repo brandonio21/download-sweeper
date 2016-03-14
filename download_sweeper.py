@@ -13,6 +13,7 @@ import yaml
 import os
 import re
 import time
+import shutil
 from datetime import datetime, timedelta
 
 # Setup the commandline arguments
@@ -89,7 +90,13 @@ class TrackedFile(object):
     A class that keeps track of the files that are scanned and then moved to
     the archive or purge directories
     def __init__(self):
-    """
+"""
+
+class File(object):
+
+    def __init__(self, path, filename):
+        self.path = path
+        self.filename = filename
 
 class ConfigFileTimeDeltaParser(object):
     DAYS_KEY = "d"
@@ -150,7 +157,7 @@ class Sweeper(object):
                                     configTranslator.stale_limit_key)))
 
                     if adjLastAccessTime < datetime.today():
-                        stalePaths.append(fullFilePath)
+                        stalePaths.append(File(fullFilePath, file))
 
         return stalePaths
 
@@ -192,10 +199,25 @@ class ConfigurationManager(object):
         return (argDictionary[key] if key in argDictionary else 
                 self.config_file_dict[key])
 
+def move_file_to_path(path, file):
+    if not os.path.isdir(path): os.mkdir(path)
+    newFilePath = os.path.join(path, file.filename)
+    shutil.move(file.path, newFilePath)
+
+def move_downloads_to_archive(sweeper, configurationManager):
+    if not configurationManager.get_option_value('archive_downloads'): return
+    downloadConfigTranslator = ConfigKeyTranslator(ConfigKeyTranslator.DOWNLOADS)
+    archiveConfigTranslator  = ConfigKeyTranslator(ConfigKeyTranslator.ARCHIVES)
+    staleFiles = sweeper.get_stale_file_paths(downloadConfigTranslator)
+    
+    for file in staleFiles:
+        for archivePath in configurationManager.get_option_value(archiveConfigTranslator.path_key):
+            move_file_to_path(archivePath, file)
+
 if __name__ == "__main__":
-    a = argparse.ArgumentParser()
-    b = a.parse_args([])
-    c = ConfigurationManager('config.yaml',b)
+    # Parse the arguments
+    parsed_args = argParser.parse_args()
+    configMgr = ConfigurationManager(parsed_args.config, parsed_args)
     cf = ConfigKeyTranslator(ConfigKeyTranslator.DOWNLOADS)
-    s = Sweeper(c)
-    print(s.get_stale_file_paths(cf))
+    s = Sweeper(configMgr)
+    move_downloads_to_archive(s, configMgr)

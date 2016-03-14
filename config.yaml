@@ -19,6 +19,6 @@ purge_stale_after: "1d"
 download_directories:
         - "/home/brandon/Downloads/"
 archive_directores:
-        - "/home/brandon/.download-archive/"
+        - "/data/brandon/Downloads/archive/"
 purge_directores:
-        - "/home/brandon/.download-purge/"
+        - "/data/brandon/Downloads/purge/"
