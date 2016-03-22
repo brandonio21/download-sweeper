@@ -211,7 +211,9 @@ class FileRecordKeeper(object):
         """ Loads the existing records from the record file """
         if not os.path.isfile(self.recordFileLocation): return
         with open(self.recordFileLocation, 'r') as openRecordFile:
-            self.records  = yaml.load(openRecordFile.read())
+            retrievedFileContents = yaml.load(openRecordFile.read())
+            if not retrievedFileContents is None:
+                self.records = retrievedFileContents
 
     def add_record(self, filePath, moveLocation, moveDate: str):
         if not str(moveLocation) in self.records:
