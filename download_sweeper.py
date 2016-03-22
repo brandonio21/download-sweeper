@@ -214,6 +214,16 @@ def move_downloads_to_archive(sweeper, configurationManager):
         for archivePath in configurationManager.get_option_value(archiveConfigTranslator.path_key):
             move_file_to_path(archivePath, file)
 
+def move_archives_to_purge(sweeper, configurationManager):
+    if not configurationManager.get_option_value('purge_archives'): return
+    archiveConfigTranslator = ConfigKeyTranslator(ConfigKeyTranslator.ARCHIVES)
+    purgeConfigTranslator   = ConfigKeyTranslator(ConfigKeyTranslator.PURGES)
+    staleFiles = sweeper.get_stale_file_paths(archiveConfigTranslator)
+
+    for file in staleFiles:
+        for purgePath in configurationManager.get_option_value(purgeConfigTranslator.path_key):
+            move_file_to_path(purgePath, file)
+
 if __name__ == "__main__":
     # Parse the arguments
     parsed_args = argParser.parse_args()
