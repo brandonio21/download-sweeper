@@ -199,12 +199,39 @@ class ConfigurationManager(object):
         return (argDictionary[key] if key in argDictionary else 
                 self.config_file_dict[key])
 
+class FileRecordKeeper(object):
+    """ Keeps track of while files have been moved, where they have been moved
+    to, and on what date/time they have been moved """
+    DEFAULT_RECORD_FILE = 'records.yaml'
+    def __init__(self, recordFile=DEFAULT_RECORD_FILE):
+        self.recordFileLocation = recordFile
+        self.records = {}    #movLoc: {Filepath: movDate}
+
+    def load_existing_records(self):
+        """ Loads the existing records from the record file """
+        if not os.path.isfile(self.recordFileLocation): return
+        with open(self.recordFileLocation, 'r') as openRecordFile:
+            self.records  = yaml.load(openRecordFile.read())
+
+    def add_record(self, filePath, moveLocation, moveDate: str):
+        if not str(moveLocation) in self.records:
+            self.records[str(moveLocation)] = {}
+        self.records[str(moveLocation)][filePath] = moveDate
+
+    def delete_record(self, filePath, moveLoc):
+        del self.records[str(moveLoc)][filePath]
+
+    def write_records(self):
+        with open(self.recordFileLocation, 'w+') as openRecordFile:
+            openRecordFile.write(yaml.dump(self.records))
+
 def move_file_to_path(path, file):
     if not os.path.isdir(path): os.mkdir(path)
     newFilePath = os.path.join(path, file.filename)
     shutil.move(file.path, newFilePath)
+    return newFilePath
 
-def move_downloads_to_archive(sweeper, configurationManager):
+def move_downloads_to_archive(sweeper, configurationManager, recordKeeper):
     if not configurationManager.get_option_value('archive_downloads'): return
     downloadConfigTranslator = ConfigKeyTranslator(ConfigKeyTranslator.DOWNLOADS)
     archiveConfigTranslator  = ConfigKeyTranslator(ConfigKeyTranslator.ARCHIVES)
@@ -212,9 +239,11 @@ def move_downloads_to_archive(sweeper, configurationManager):
     
     for file in staleFiles:
         for archivePath in configurationManager.get_option_value(archiveConfigTranslator.path_key):
-            move_file_to_path(archivePath, file)
+            archivedFilePath = move_file_to_path(archivePath, file)
+            recordKeeper.add_record(archivedFilePath, ConfigKeyTranslator.ARCHIVES,
+                    time.ctime())
 
-def move_archives_to_purge(sweeper, configurationManager):
+def move_archives_to_purge(sweeper, configurationManager, recordKeeper):
     if not configurationManager.get_option_value('purge_archives'): return
     archiveConfigTranslator = ConfigKeyTranslator(ConfigKeyTranslator.ARCHIVES)
     purgeConfigTranslator   = ConfigKeyTranslator(ConfigKeyTranslator.PURGES)
@@ -222,7 +251,10 @@ def move_archives_to_purge(sweeper, configurationManager):
 
     for file in staleFiles:
         for purgePath in configurationManager.get_option_value(purgeConfigTranslator.path_key):
-            move_file_to_path(purgePath, file)
+            recordKeeper.delete_record(file.path, ConfigKeyTranslator.ARCHIVES)
+            purgedFilePath = move_file_to_path(purgePath, file)
+            recordKeeper.add_record(purgedFilePath, ConfigKeyTranslator.PURGES,
+                    time.ctime())
 
 if __name__ == "__main__":
     # Parse the arguments
@@ -230,4 +262,8 @@ if __name__ == "__main__":
     configMgr = ConfigurationManager(parsed_args.config, parsed_args)
     cf = ConfigKeyTranslator(ConfigKeyTranslator.DOWNLOADS)
     s = Sweeper(configMgr)
-    move_downloads_to_archive(s, configMgr)
+    records = FileRecordKeeper()
+    records.load_existing_records()
+    move_downloads_to_archive(s, configMgr, records)
+    move_archives_to_purge(s, configMgr, records)
+    records.write_records()
