@@ -58,13 +58,13 @@ shredWhenPurgingGrp.add_argument('--no-shred',default=argparse.SUPPRESS,
                       action='store_false',dest='shred_when_purging')
 
 class ConfigKeyTranslator(object):
-    DOWNLOADS = 0
-    ARCHIVES = 1
-    PURGES = 2
-    _translation_list = [
-         ('download_stale_after', 'download_directories'),
-         ('archive_stale_after','archive_directores'     ),
-         ('purge_stale_after', 'purge_directores'        ) ]
+    DOWNLOADS = "downloads"
+    ARCHIVES = "archive"
+    PURGES = "purge"
+    _translation_list = {
+            DOWNLOADS: ('download_stale_after', 'download_directories'),
+            ARCHIVES: ('archive_stale_after','archive_directores'     ),
+            PURGES: ('purge_stale_after', 'purge_directores'        ) }
 
     def __init__(self, configType):
         self.configType = configType
@@ -125,8 +125,13 @@ class Sweeper(object):
         for directoryPath in self.configManager.get_option_value(
                 configTranslator.path_key):
             for root, dirs, files in os.walk(directoryPath):
-                for file in files:
+                for file in (files+dirs):
                     fullFilePath       = os.path.join(root, file)
+
+                    # Skip directories that are not empty
+                    if os.path.isdir(fullFilePath) and not len(os.listdir(fullFilePath)) == 0:
+                        continue
+
                     if configTranslator.configType == ConfigKeyTranslator.DOWNLOADS:
                         lastAccessCDate    = os.lstat(fullFilePath).st_atime
                         lastAccessDatetime = datetime.strptime(
@@ -143,6 +148,7 @@ class Sweeper(object):
 
                     if adjLastAccessTime < datetime.today():
                         stalePaths.append(File(fullFilePath, file))
+
 
         return stalePaths
 
@@ -238,10 +244,13 @@ def move_downloads_to_archive(sweeper, configurationManager, recordKeeper):
     staleFiles = sweeper.get_stale_file_paths(downloadConfigTranslator, recordKeeper)
     
     for file in staleFiles:
-        for archivePath in configurationManager.get_option_value(archiveConfigTranslator.path_key):
-            archivedFilePath = move_file_to_path(archivePath, file)
-            recordKeeper.add_record(archivedFilePath, ConfigKeyTranslator.ARCHIVES,
-                    time.ctime())
+        if os.path.isfile(file.path):
+            for archivePath in configurationManager.get_option_value(archiveConfigTranslator.path_key):
+                archivedFilePath = move_file_to_path(archivePath, file)
+                recordKeeper.add_record(archivedFilePath, ConfigKeyTranslator.ARCHIVES,
+                        time.ctime())
+        else:
+            os.rmdir(file.path)
 
 def move_archives_to_purge(sweeper, configurationManager, recordKeeper):
     if not configurationManager.get_option_value('purge_archives'): return
@@ -250,11 +259,14 @@ def move_archives_to_purge(sweeper, configurationManager, recordKeeper):
     staleFiles = sweeper.get_stale_file_paths(archiveConfigTranslator, recordKeeper)
 
     for file in staleFiles:
-        for purgePath in configurationManager.get_option_value(purgeConfigTranslator.path_key):
-            recordKeeper.delete_record(file.path, ConfigKeyTranslator.ARCHIVES)
-            purgedFilePath = move_file_to_path(purgePath, file)
-            recordKeeper.add_record(purgedFilePath, ConfigKeyTranslator.PURGES,
-                    time.ctime())
+        if os.path.isfile(file.path):
+            for purgePath in configurationManager.get_option_value(purgeConfigTranslator.path_key):
+                recordKeeper.delete_record(file.path, ConfigKeyTranslator.ARCHIVES)
+                purgedFilePath = move_file_to_path(purgePath, file)
+                recordKeeper.add_record(purgedFilePath, ConfigKeyTranslator.PURGES,
+                        time.ctime())
+        else:
+            os.rmdir(file.path)
 
 def delete_from_purge(sweeper, configurationMangager, recordKeeper):
     purgeConfigTranslator = ConfigKeyTranslator(ConfigKeyTranslator.PURGES)
@@ -262,7 +274,8 @@ def delete_from_purge(sweeper, configurationMangager, recordKeeper):
 
     # Delete all stale purge files
     for file in staleFiles:
-        os.remove(file.path)
+        if os.path.isdir(file.path): shutil.rmtree(file.path)
+        else: os.remove(file.path)
 
 if __name__ == "__main__":
     # Parse the arguments
