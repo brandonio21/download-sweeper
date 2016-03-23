@@ -71,28 +71,6 @@ class ConfigKeyTranslator(object):
         self.stale_limit_key, self.path_key = self._translation_list[configType]
         
 
-"""
-class TrackedFileType(object):
-    ARCHIVED = 0
-    PURGE = 1
-
-class TrackedFileFactory(object):
-
-    def __init__(self, trackedFileType):
-        self.trackedFileType = trackedFileType
-
-    def create_new_tracked_file(self):
-
-class ArchivedTrackFile(TrackedFile):
-
-class PurgeTrackFile(TrackedFile):
-
-class TrackedFile(object):
-    A class that keeps track of the files that are scanned and then moved to
-    the archive or purge directories
-    def __init__(self):
-"""
-
 class File(object):
 
     def __init__(self, path, filename):
@@ -278,6 +256,14 @@ def move_archives_to_purge(sweeper, configurationManager, recordKeeper):
             recordKeeper.add_record(purgedFilePath, ConfigKeyTranslator.PURGES,
                     time.ctime())
 
+def delete_from_purge(sweeper, configurationMangager, recordKeeper):
+    purgeConfigTranslator = ConfigKeyTranslator(ConfigKeyTranslator.PURGES)
+    staleFiles = sweeper.get_stale_file_paths(purgeConfigTranslator, recordKeeper)
+
+    # Delete all stale purge files
+    for file in staleFiles:
+        os.remove(file.path)
+
 if __name__ == "__main__":
     # Parse the arguments
     parsed_args = argParser.parse_args()
@@ -289,4 +275,5 @@ if __name__ == "__main__":
     records.clean_records()
     move_downloads_to_archive(s, configMgr, records)
     move_archives_to_purge(s, configMgr, records)
+    delete_from_purge(s, configMgr, records)
     records.write_records()
