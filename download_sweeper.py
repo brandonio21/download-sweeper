@@ -67,6 +67,7 @@ class ConfigKeyTranslator(object):
          ('purge_stale_after', 'purge_directores'        ) ]
 
     def __init__(self, configType):
+        self.configType = configType
         self.stale_limit_key, self.path_key = self._translation_list[configType]
         
 
@@ -134,7 +135,7 @@ class Sweeper(object):
         self.configManager = configManager
 
 
-    def get_stale_file_paths(self, configTranslator):
+    def get_stale_file_paths(self, configTranslator, recordKeeper):
         """ 
         Gets the paths of all stale files in the certain type of directory.
 
@@ -148,9 +149,15 @@ class Sweeper(object):
             for root, dirs, files in os.walk(directoryPath):
                 for file in files:
                     fullFilePath       = os.path.join(root, file)
-                    lastAccessCDate    = os.lstat(fullFilePath).st_atime
-                    lastAccessDatetime = datetime.strptime(
-                            time.ctime(lastAccessCDate), "%a %b %d %H:%M:%S %Y")
+                    if configTranslator.configType == ConfigKeyTranslator.DOWNLOADS:
+                        lastAccessCDate    = os.lstat(fullFilePath).st_atime
+                        lastAccessDatetime = datetime.strptime(
+                                time.ctime(lastAccessCDate), "%a %b %d %H:%M:%S %Y")
+                    else:
+                        lastAccessDatetime = datetime.strptime(
+                                recordKeeper.get_record(configTranslator.configType,
+                                    fullFilePath), "%a %b %d %H:%M:%S %Y")
+
                     adjLastAccessTime = (lastAccessDatetime +
                             ConfigFileTimeDeltaParser.get_timedelta_from_config_str(
                                 self.configManager.get_option_value(
@@ -220,8 +227,21 @@ class FileRecordKeeper(object):
             self.records[str(moveLocation)] = {}
         self.records[str(moveLocation)][filePath] = moveDate
 
+    def get_record(self, movLocation, filePath):
+        return self.records[str(movLocation)][filePath]
+
     def delete_record(self, filePath, moveLoc):
         del self.records[str(moveLoc)][filePath]
+
+    def clean_records(self):
+        badRecords = []
+        for movLocation in self.records:
+            for filePath in self.records[movLocation]:
+                if not os.path.isfile(filePath):
+                    badRecords.append((filePath, movLocation))
+
+        for badRecord in badRecords:
+            self.delete_record(badRecord[0], badRecord[1])
 
     def write_records(self):
         with open(self.recordFileLocation, 'w+') as openRecordFile:
@@ -237,7 +257,7 @@ def move_downloads_to_archive(sweeper, configurationManager, recordKeeper):
     if not configurationManager.get_option_value('archive_downloads'): return
     downloadConfigTranslator = ConfigKeyTranslator(ConfigKeyTranslator.DOWNLOADS)
     archiveConfigTranslator  = ConfigKeyTranslator(ConfigKeyTranslator.ARCHIVES)
-    staleFiles = sweeper.get_stale_file_paths(downloadConfigTranslator)
+    staleFiles = sweeper.get_stale_file_paths(downloadConfigTranslator, recordKeeper)
     
     for file in staleFiles:
         for archivePath in configurationManager.get_option_value(archiveConfigTranslator.path_key):
@@ -249,7 +269,7 @@ def move_archives_to_purge(sweeper, configurationManager, recordKeeper):
     if not configurationManager.get_option_value('purge_archives'): return
     archiveConfigTranslator = ConfigKeyTranslator(ConfigKeyTranslator.ARCHIVES)
     purgeConfigTranslator   = ConfigKeyTranslator(ConfigKeyTranslator.PURGES)
-    staleFiles = sweeper.get_stale_file_paths(archiveConfigTranslator)
+    staleFiles = sweeper.get_stale_file_paths(archiveConfigTranslator, recordKeeper)
 
     for file in staleFiles:
         for purgePath in configurationManager.get_option_value(purgeConfigTranslator.path_key):
@@ -266,6 +286,7 @@ if __name__ == "__main__":
     s = Sweeper(configMgr)
     records = FileRecordKeeper()
     records.load_existing_records()
+    records.clean_records()
     move_downloads_to_archive(s, configMgr, records)
     move_archives_to_purge(s, configMgr, records)
     records.write_records()
