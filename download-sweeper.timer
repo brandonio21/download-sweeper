@@ -1,0 +1,8 @@
+[Unit]
+Description=Run download-sweeper daily and on boot
+
+[Timer]
+OnCalendar=daily
+
+[Install]
+WantedBy=timers.target

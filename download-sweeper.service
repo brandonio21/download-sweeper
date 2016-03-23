@@ -1,0 +1,11 @@
+[Unit]
+Description=Handles the archiving and deletion of stale download files
+Documentation=https://github.com/brandonio21/download-sweeper
+
+[Service]
+Type=simple
+Environment="DOWNLOADSWEEPERPATH="
+ExecStart="/usr/bin/python ${DOWNLOADSWEEPERPATH}/download_sweeper.py"
+
+[Install]
+Alias=downloadsweeper download_sweeper
