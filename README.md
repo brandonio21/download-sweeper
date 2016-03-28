@@ -4,6 +4,23 @@ A tool written in Python meant to help get rid of old downloads without running
 the risk of losing data that you need. download-sweeper's primary goal is to
 save the user precious disk space.
 
+Installation/Run Instructions
+-------------------------
+To install and run `download-sweeper`, do the following:
+```
+git clone https://github.com/brandonio21/download-sweeper
+make
+make install
+systemctl start download-sweeper
+```
+
+
+To enable the timer:
+```
+systemctl enable download-sweeper.timer
+systemctl start download-sweeper.timer
+```
+
 
 The Three-Tier Model
 --------------------
