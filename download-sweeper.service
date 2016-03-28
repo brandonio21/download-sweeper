@@ -4,7 +4,7 @@ Documentation=https://github.com/brandonio21/download-sweeper
 
 [Service]
 Type=simple
-ExecStart="/usr/bin/python DOWNLOADSWEEPERPATH/download_sweeper.py"
+ExecStart="DOWNLOADSWEEPERPATH/download_sweeper.py"
 
 [Install]
 Alias=downloadsweeper download_sweeper
