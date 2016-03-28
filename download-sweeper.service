@@ -4,6 +4,7 @@ Documentation=https://github.com/brandonio21/download-sweeper
 
 [Service]
 Type=simple
+WorkingDirectory=DOWNLOADSWEEPERPATH
 ExecStart="DOWNLOADSWEEPERPATH/download_sweeper.py"
 
 [Install]
