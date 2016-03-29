@@ -162,6 +162,20 @@ class Sweeper(object):
 
         return stalePaths
 
+    def get_all_file_paths(self, configTranslator):
+        """
+        Gets the paths of all files in the certain type of directory.
+
+        """
+        filePaths = []
+        for directoryPath in self.configManager.get_option_value(
+                configTranslator.path_key):
+            for root, dirs, files in os.walk(directoryPath):
+                for file in files:
+                    filePaths.append(os.path.join(root, file))
+
+        return filePaths
+
 class ConfigurationManager(object):
     class ConfigurationException(Exception): pass
 
@@ -225,6 +239,9 @@ class FileRecordKeeper(object):
         if str(movLocationType) in self.records:
             return list(self.records[str(movLocationType)].keys())
         else: return []
+
+    def record_exists(self, movLocation, filePath):
+        return str(movLocation) in self.records and filePath in self.records[str(movLocation)]
 
     def get_record(self, movLocation, filePath):
         return self.records[str(movLocation)][filePath]
@@ -308,12 +325,30 @@ def compress_archive_files(configurationManager, recordKeeper):
     for filePath in recordKeeper.get_filepaths_in_type(ConfigKeyTranslator.ARCHIVES)[:]:
         fileExtension = os.path.splitext(filePath)[1]
         if not is_zip_extension(fileExtension):
-            zipPath = zip_path(filePath)
-            os.remove(filePath)
-            recordedDatetime = recordKeeper.get_record(ConfigKeyTranslator.ARCHIVES,
-                    filePath)
-            recordKeeper.delete_record(filePath, ConfigKeyTranslator.ARCHIVES)
-            recordKeeper.add_record(zipPath, ConfigKeyTranslator.ARCHIVES, recordedDatetime)
+            try:
+                zipPath = zip_path(filePath)
+                os.remove(filePath)
+                recordedDatetime = recordKeeper.get_record(ConfigKeyTranslator.ARCHIVES,
+                        filePath)
+                recordKeeper.delete_record(filePath, ConfigKeyTranslator.ARCHIVES)
+                recordKeeper.add_record(zipPath, ConfigKeyTranslator.ARCHIVES, recordedDatetime)
+            except Exception:
+                continue
+
+def load_untracked_archives_into_record(sweeper, records):
+    archiveConfigTranslator = ConfigKeyTranslator(ConfigKeyTranslator.ARCHIVES)
+    archivedFiles = sweeper.get_all_file_paths(archiveConfigTranslator)
+    add_unknown_files_to_record(ConfigKeyTranslator.ARCHIVES, records, archivedFiles)
+
+def load_untracked_purges_into_record(sweeper, records):
+    purgeConfigTranslator = ConfigKeyTranslator(ConfigKeyTranslator.PURGES)
+    purgedFiles = sweeper.get_all_file_paths(purgeConfigTranslator)
+    add_unknown_files_to_record(ConfigKeyTranslator.PURGES, records, purgedFiles)
+
+def add_unknown_files_to_record(locationType, records, paths):
+    for path in paths:
+        if not records.record_exists(locationType, path):
+            records.add_record(path, locationType, time.ctime())
 
 if __name__ == "__main__":
     # Parse the arguments
@@ -323,6 +358,8 @@ if __name__ == "__main__":
     records = FileRecordKeeper()
     records.load_existing_records()
     records.clean_records()
+    load_untracked_archives_into_record(sweeperObj, records)
+    load_untracked_purges_into_record(sweeperObj, records)
 
     if configMgr.get_option_value('archive_downloads'):
         move_downloads_to_archive(sweeperObj, configMgr, records)
