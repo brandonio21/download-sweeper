@@ -59,14 +59,6 @@ deleteFromPurgeGrp.add_argument('--no-delete-from-purge',
                       directory should not be deleted''', action='store_false',
                       dest='delete_from_purge')
 
-shredWhenPurgingGrp = argParser.add_mutually_exclusive_group()
-shredWhenPurgingGrp.add_argument('--shred',default=argparse.SUPPRESS,
-                      help='Shred files when deleting them',action='store_true',
-                      dest='shred_when_purging')
-shredWhenPurgingGrp.add_argument('--no-shred',default=argparse.SUPPRESS,
-                      help='Do not shred files when deleting them',
-                      action='store_false',dest='shred_when_purging')
-
 class ConfigKeyTranslator(object):
     DOWNLOADS = "downloads"
     ARCHIVES = "archive"
@@ -281,6 +273,8 @@ def move_downloads_to_archive(sweeper, configurationManager, recordKeeper):
                 archivedFilePath = move_file_to_path(archivePath, file)
                 recordKeeper.add_record(archivedFilePath, ConfigKeyTranslator.ARCHIVES,
                         time.ctime())
+                if not configurationManager.get_option_value('move_to_all_archive_dirs'):
+                    break
         else:
             os.rmdir(file.path)
 
@@ -297,6 +291,8 @@ def move_archives_to_purge(sweeper, configurationManager, recordKeeper):
                 purgedFilePath = move_file_to_path(purgePath, file)
                 recordKeeper.add_record(purgedFilePath, ConfigKeyTranslator.PURGES,
                         time.ctime())
+                if not configurationManager.get_option_value('move_to_all_purge_dirs'):
+                    break
         else:
             os.rmdir(file.path)
 
