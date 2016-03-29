@@ -140,7 +140,6 @@ class Sweeper(object):
 
                     # Skip directories that are not empty
                     if os.path.isdir(fullFilePath) and not len(os.listdir(fullFilePath)) == 0:
-                        continue
 
                     if configTranslator.configType == ConfigKeyTranslator.DOWNLOADS:
                         lastAccessCDate    = os.lstat(fullFilePath).st_atime
@@ -308,15 +307,12 @@ def compress_archive_files(configurationManager, recordKeeper):
     for filePath in recordKeeper.get_filepaths_in_type(ConfigKeyTranslator.ARCHIVES)[:]:
         fileExtension = os.path.splitext(filePath)[1]
         if not is_zip_extension(fileExtension):
-            print("Zipping {}".format(filePath))
             zipPath = zip_path(filePath)
             os.remove(filePath)
-            print("Zipped to {}".format(zipPath))
             recordedDatetime = recordKeeper.get_record(ConfigKeyTranslator.ARCHIVES,
                     filePath)
             recordKeeper.delete_record(filePath, ConfigKeyTranslator.ARCHIVES)
             recordKeeper.add_record(zipPath, ConfigKeyTranslator.ARCHIVES, recordedDatetime)
-            print("Records updated")
 
 if __name__ == "__main__":
     # Parse the arguments
