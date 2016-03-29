@@ -1,2 +1,4 @@
 download-sweeper.service
 downloadsweepervenv/
+__pycache__/
+records.yaml
