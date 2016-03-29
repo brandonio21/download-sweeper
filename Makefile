@@ -11,6 +11,6 @@ install: download-sweeper.service download-sweeper.timer downloadsweepervenv
 downloadsweepervenv: downloadsweepervenv/bin/activate
 
 downloadsweepervenv/bin/activate: requirements.txt
-	test -d downloadsweepervenv || virtualenv downloadsweepervenv
+	test -d downloadsweepervenv || virtualenv -p /usr/bin/python3 downloadsweepervenv 
 	downloadsweepervenv/bin/pip install -r requirements.txt
 	touch downloadsweepervenv/bin/activate
