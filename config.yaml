@@ -2,6 +2,7 @@
 archive_downloads:  true
 purge_archives:     true
 compress_archives:  true
+delete_from_purge:  true
 shred_when_purging: true
 
 # Transfer settings
@@ -19,6 +20,6 @@ purge_stale_after: "1d"
 download_directories:
         - "/home/brandon/Downloads/"
 archive_directores:
-        - "/data/brandon/Downloads/archive/"
+        - "/home/brandon/.download-archive/"
 purge_directores:
-        - "/data/brandon/Downloads/purge/"
+        - "/home/brandon/.download-purge/"
