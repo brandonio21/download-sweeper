@@ -15,6 +15,7 @@ import re
 import time
 import shutil
 from datetime import datetime, timedelta
+from zipfile import ZipFile
 
 # Setup the commandline arguments
 argParser = argparse.ArgumentParser(description="Manage old downloaded files")
@@ -48,6 +49,15 @@ compressArchivesGrp.add_argument('--no-compress-archives',
                       default=argparse.SUPPRESS,help='''Archived files should 
                       remain uncompressed''',action='store_false',
                       dest='compress_archives')
+
+deleteFromPurgeGrp = argParser.add_mutually_exclusive_group()
+deleteFromPurgeGrp.add_argument('--delete-from-purge', default=argparse.SUPPRESS,
+                      help='''Files in the purge directory should be deleted''',
+                      action='store_true', dest='delete_from_purge')
+deleteFromPurgeGrp.add_argument('--no-delete-from-purge', 
+                      default=argparse.SUPPRESS, help='''Files in the purge 
+                      directory should not be deleted''', action='store_false',
+                      dest='delete_from_purge')
 
 shredWhenPurgingGrp = argParser.add_mutually_exclusive_group()
 shredWhenPurgingGrp.add_argument('--shred',default=argparse.SUPPRESS,
@@ -211,6 +221,11 @@ class FileRecordKeeper(object):
             self.records[str(moveLocation)] = {}
         self.records[str(moveLocation)][filePath] = moveDate
 
+    def get_filepaths_in_type(self, movLocationType):
+        if str(movLocationType) in self.records:
+            return list(self.records[str(movLocationType)].keys())
+        else: return []
+
     def get_record(self, movLocation, filePath):
         return self.records[str(movLocation)][filePath]
 
@@ -277,16 +292,52 @@ def delete_from_purge(sweeper, configurationMangager, recordKeeper):
         if os.path.isdir(file.path): shutil.rmtree(file.path)
         else: os.remove(file.path)
 
+def is_zip_extension(extension):
+    return extension in ['.zip']
+
+def zip_path(filePath):
+    zipPath = '{}.zip'.format(filePath)
+    with ZipFile(zipPath, 'w') as zipFile:
+        zipFile.write(filePath)
+
+    return zipPath
+
+
+def compress_archive_files(configurationManager, recordKeeper):
+    # For now there will be no compression method available except for ZIP
+    for filePath in recordKeeper.get_filepaths_in_type(ConfigKeyTranslator.ARCHIVES)[:]:
+        fileExtension = os.path.splitext(filePath)[1]
+        if not is_zip_extension(fileExtension):
+            print("Zipping {}".format(filePath))
+            zipPath = zip_path(filePath)
+            os.remove(filePath)
+            print("Zipped to {}".format(zipPath))
+            recordedDatetime = recordKeeper.get_record(ConfigKeyTranslator.ARCHIVES,
+                    filePath)
+            recordKeeper.delete_record(filePath, ConfigKeyTranslator.ARCHIVES)
+            recordKeeper.add_record(zipPath, ConfigKeyTranslator.ARCHIVES, recordedDatetime)
+            print("Records updated")
+
 if __name__ == "__main__":
     # Parse the arguments
     parsed_args = argParser.parse_args()
     configMgr = ConfigurationManager(parsed_args.config, parsed_args)
-    cf = ConfigKeyTranslator(ConfigKeyTranslator.DOWNLOADS)
-    s = Sweeper(configMgr)
+    sweeperObj = Sweeper(configMgr)
     records = FileRecordKeeper()
     records.load_existing_records()
     records.clean_records()
-    move_downloads_to_archive(s, configMgr, records)
-    move_archives_to_purge(s, configMgr, records)
-    delete_from_purge(s, configMgr, records)
+
+    if configMgr.get_option_value('archive_downloads'):
+        move_downloads_to_archive(sweeperObj, configMgr, records)
+
+    if configMgr.get_option_value('compress_archives'):
+        compress_archive_files(configMgr, records)
+
+    if configMgr.get_option_value('purge_archives'):
+        move_archives_to_purge(sweeperObj, configMgr, records)
+
+    if configMgr.get_option_value('delete_from_purge'):
+        delete_from_purge(sweeperObj, configMgr, records)
+
+
     records.write_records()
