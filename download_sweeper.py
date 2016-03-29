@@ -140,6 +140,7 @@ class Sweeper(object):
 
                     # Skip directories that are not empty
                     if os.path.isdir(fullFilePath) and not len(os.listdir(fullFilePath)) == 0:
+                        continue
 
                     if configTranslator.configType == ConfigKeyTranslator.DOWNLOADS:
                         lastAccessCDate    = os.lstat(fullFilePath).st_atime
