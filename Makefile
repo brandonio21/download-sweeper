@@ -1,5 +1,5 @@
 
-configure: download_sweeper.py download-sweeper.service download-sweeper.timer
+configure: download_sweeper.py download-sweeper.service.template download-sweeper.timer
 	cat download-sweeper.service.template | sed "s@DOWNLOADSWEEPERPATH@${PWD}@g" > download-sweeper.service 
 
 install: download-sweeper.service download-sweeper.timer downloadsweepervenv
