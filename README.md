@@ -4,6 +4,17 @@ A tool written in Python meant to help get rid of old downloads without running
 the risk of losing data that you need. download-sweeper's primary goal is to
 save the user precious disk space.
 
+download-sweeper is modifiable via commandline args or a YAML configuration
+file. Further, it integrates with systemd so that download cleanup can be
+performed automatically.
+
+Requirements
+------------
+By default, download-sweeper has the following dependencies:
+* Python 3
+* pip
+* virtualenv
+
 Installation/Run Instructions
 -------------------------
 To install and run `download-sweeper`, do the following:
@@ -21,9 +32,13 @@ systemctl enable download-sweeper.timer
 systemctl start download-sweeper.timer
 ```
 
+Note that by default the timer will run everyday and on system start.
 
-The Three-Tier Model
---------------------
+
+Design
+------
+
+### The Three-Tier Model ###
 download-sweeper considers downloads to be organized in three tiers:
 
 1. The Download Tier: Files that are freshly downloaded or accessed
@@ -38,8 +53,7 @@ download-sweeper considers downloads to be organized in three tiers:
 
 
 
-Flexibility
-----------
+### Flexibility ###
 download-sweeper is meant to be extremely flexible and allow the user to deal
 with any sort of data-redundance that they want to take place. Thus, the user
 can easily edit the YAML configuration file (even while download-sweeper is 
@@ -59,15 +73,16 @@ A user could also declare several directories as download directories
 the download-sweeper pipeline.
 
 
-Isolation
----------
+### Isolation ###
 As a development philosophy, download-sweeper will be able to read all settings
 found within the configuraiton file as commandline arguments, meaning that it
 can be run without access to a configuration file.
 
+Further, download-sweeper leverages the isolation provided by virtualenv to 
+ensure that its dependencies (namely PyYaml) are not installed onto the users'
+entire system.
 
-Systemd Integration
--------------------
+### Systemd Integration ###
 download-sweeper is primarily meant to be run on system startup; however, 
 service files will be instantiated when the user initiates "make" that will
 allow the user to customize the intervals at which download-sweeper runs.
