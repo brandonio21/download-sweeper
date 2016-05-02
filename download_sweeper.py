@@ -258,7 +258,12 @@ class FileRecordKeeper(object):
 def move_file_to_path(path, file):
     if not os.path.isdir(path): os.mkdir(path)
     newFilePath = os.path.join(path, file.filename)
+
+    oldFileDetails = os.stat(file.path)
+    oldUid = oldFileDetails.st_uid
+    oldGid = oldFileDetails.st_gid
     shutil.move(file.path, newFilePath)
+    os.chown(newFilePath, oldUid, oldGid)
     return newFilePath
 
 def move_downloads_to_archive(sweeper, configurationManager, recordKeeper):
@@ -309,10 +314,10 @@ def is_zip_extension(extension):
     return extension in ['.zip']
 
 def zip_path(filePath):
+    
     zipPath = '{}.zip'.format(filePath)
     with ZipFile(zipPath, 'w') as zipFile:
         zipFile.write(filePath)
-
     return zipPath
 
 
