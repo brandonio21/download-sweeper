@@ -25,6 +25,9 @@ make install
 systemctl start download-sweeper
 ```
 
+`download-sweeper` is also available in the [AUR]
+(https://aur.archlinux.org/packages/download-sweeper/)
+
 
 To enable the timer:
 ```
