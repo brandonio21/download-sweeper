@@ -9,9 +9,9 @@ configure: download_sweeper.py download-sweeper.service.template download-sweepe
 	cat download-sweeper.service.template | sed "s@DOWNLOADSWEEPERPATH@${DESTDIR}@g" > download-sweeper.service 
 
 install: download-sweeper.service download-sweeper.timer downloadsweepervenv
-	sudo cp download-sweeper.service /usr/lib/systemd/system/
-	sudo chmod 664 /usr/lib/systemd/system/download-sweeper.service
-	sudo cp download-sweeper.timer /usr/lib/systemd/system/
-	sudo chmod 664 /usr/lib/systemd/system/download-sweeper.timer
+	cp download-sweeper.service /usr/lib/systemd/system/
+	chmod 664 /usr/lib/systemd/system/download-sweeper.service
+	cp download-sweeper.timer /usr/lib/systemd/system/
+	chmod 664 /usr/lib/systemd/system/download-sweeper.timer
 
 
