@@ -6,6 +6,7 @@ ${DESTDIR}/etc/download-sweeper/venv/bin/activate: requirements.txt
 	touch ${DESTDIR}/etc/download-sweeper/venv/bin/activate
 
 install: download-sweeper.service download-sweeper.timer config.yaml download_sweeper.py 
+	mkdir -p ${DESTDIR}/etc/download-sweeper/
 	mkdir -p ${DESTDIR}/usr/lib/systemd/system/
 	install config.yaml ${DESTDIR}/etc/download-sweeper/
 	install -Dm755 download_sweeper.py ${DESTDIR}/usr/bin/
