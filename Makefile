@@ -10,7 +10,7 @@ install: download-sweeper.service download-sweeper.timer config.yaml download_sw
 	mkdir -p ${DESTDIR}/etc/download-sweeper/
 	mkdir -p ${DESTDIR}/usr/lib/systemd/system/
 	mkdir -p ${DESTDIR}/usr/bin/
-	install config.yaml ${DESTDIR}/etc/download-sweeper/
+	install -Dm644 config.yaml ${DESTDIR}/etc/download-sweeper/
 	install -Dm755 download_sweeper.py ${DESTDIR}/usr/bin/
 	install -Dm644 download-sweeper.service ${DESTDIR}/usr/lib/systemd/system/
 	install -Dm644 download-sweeper.timer ${DESTDIR}/usr/lib/systemd/system/
