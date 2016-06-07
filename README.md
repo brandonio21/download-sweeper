@@ -20,7 +20,6 @@ Installation/Run Instructions
 To install and run `download-sweeper`, do the following:
 ```
 git clone https://github.com/brandonio21/download-sweeper
-make
 make install
 systemctl start download-sweeper
 ```
