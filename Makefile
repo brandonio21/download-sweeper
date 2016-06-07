@@ -1,12 +1,12 @@
-downloadsweepervenv: ${DESTDIR}/etc/download-sweeper/venv/bin/activate
+downloadsweepervenv: ${HOME}/.virtualenvs/download-sweeper/bin/activate
 
-${DESTDIR}/etc/download-sweeper/venv/bin/activate: requirements.txt
-	test -d ${DESTDIR}/etc/download-sweeper || mkdir -p ${DESTDIR}/etc/download-sweeper
-	test -d ${DESTDIR}/etc/download-sweeper/venv || virtualenv -p /usr/bin/python3 ${DESTDIR}/etc/download-sweeper/venv
-	${DESTDIR}/etc/download-sweeper/venv/bin/pip install -r requirements.txt
-	touch ${DESTDIR}/etc/download-sweeper/venv/bin/activate
+${HOME}/.virtualenvs/download-sweeper/bin/activate: requirements.txt download-sweeper.service
+	sed "s@\$${HOME}@${HOME}@g" -i download-sweeper.service
+	test -d ${HOME}/.virtualenvs/download-sweeper || virtualenv -p /usr/bin/python3 ${HOME}/.virtualenvs/download-sweeper
+	${HOME}/.virtualenvs/download-sweeper/bin/pip install -r requirements.txt
+	touch ${HOME}/.virtualenvs/download-sweeper/bin/activate
 
-install: download-sweeper.service download-sweeper.timer config.yaml download_sweeper.py downloadsweepervenv
+install: download-sweeper.service download-sweeper.timer config.yaml download_sweeper.py
 	mkdir -p ${DESTDIR}/etc/download-sweeper/
 	mkdir -p ${DESTDIR}/usr/lib/systemd/system/
 	mkdir -p ${DESTDIR}/usr/bin/
