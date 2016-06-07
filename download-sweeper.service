@@ -4,8 +4,7 @@ Documentation=https://github.com/brandonio21/download-sweeper
 
 [Service]
 Type=simple
-WorkingDirectory=DOWNLOADSWEEPERPATH
-ExecStart=/usr/bin/bash -c "source DOWNLOADSWEEPERPATH/downloadsweepervenv/bin/activate ;DOWNLOADSWEEPERPATH/download_sweeper.py ;deactivate"
+ExecStart=/usr/bin/bash -c "source /etc/download-sweeper/venv/bin/activate ;/user/bin/download_sweeper.py ;deactivate"
 
 [Install]
 Alias=downloadsweeper download_sweeper

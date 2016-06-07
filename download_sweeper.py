@@ -19,8 +19,8 @@ from zipfile import ZipFile
 
 # Setup the commandline arguments
 argParser = argparse.ArgumentParser(description="Manage old downloaded files")
-argParser.add_argument('--config', default='config.yaml', 
-                       help='The location of the configuration file to load')
+argParser.add_argument('--config', default='/etc/download-sweeper',
+                       help='The location of the configuration directory')
 
 # Functionality enable settings
 archiveDownloadsGrp = argParser.add_mutually_exclusive_group()
@@ -170,13 +170,14 @@ class Sweeper(object):
 
 class ConfigurationManager(object):
     class ConfigurationException(Exception): pass
+    CONFIG_FILE_NAME = "config.yaml"
 
     """ An object used to manage the download-sweeper configuration file
     and retrieve specific settings"""
     def __init__(self, configPath, argNamespace, loadFile=True):
         """ Create the configuration manager and load the specified data from
         the file if loadFile is true """
-        self.config_file_path = configPath
+        self.config_file_path = os.path.join(configPath, self.CONFIG_FILE_NAME)
         self.config_file_dict = {}
         self.argNamespace = argNamespace
 
@@ -210,8 +211,8 @@ class FileRecordKeeper(object):
     """ Keeps track of while files have been moved, where they have been moved
     to, and on what date/time they have been moved """
     DEFAULT_RECORD_FILE = 'records.yaml'
-    def __init__(self, recordFile=DEFAULT_RECORD_FILE):
-        self.recordFileLocation = recordFile
+    def __init__(self, configPath, recordFile=DEFAULT_RECORD_FILE):
+        self.recordFileLocation = os.path.join(configPath, recordFile)
         self.records = {}    #movLoc: {Filepath: movDate}
 
     def load_existing_records(self):
@@ -356,7 +357,7 @@ if __name__ == "__main__":
     parsed_args = argParser.parse_args()
     configMgr = ConfigurationManager(parsed_args.config, parsed_args)
     sweeperObj = Sweeper(configMgr)
-    records = FileRecordKeeper()
+    records = FileRecordKeeper(parsed_args.config)
     records.load_existing_records()
     records.clean_records()
     load_untracked_archives_into_record(sweeperObj, records)
