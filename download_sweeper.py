@@ -17,9 +17,16 @@ import shutil
 from datetime import datetime, timedelta
 from zipfile import ZipFile
 
+
+def get_config_path():
+    home_dir = os.path.expanduser('~')
+    config_path = os.path.join('download-sweeper', 'config')
+    return os.path.join(os.path.join(home_dir, '.config'), config_path)
+
+
 # Setup the commandline arguments
 argParser = argparse.ArgumentParser(description="Manage old downloaded files")
-argParser.add_argument('--config', default='/etc/download-sweeper',
+argParser.add_argument('--config', default=get_config_path(),
                        help='The location of the configuration directory')
 
 # Functionality enable settings
@@ -194,9 +201,31 @@ class ConfigurationManager(object):
         """ Return a human-readable representation by delegating to __str__ """
         return self.__str__()
 
+    def write_default_config_values(self):
+        default_config = {
+            'archive_downloads': True,
+            'purge_archives': True,
+            'compress_archives': True,
+            'delete_from_purge': True,
+            'move_to_all_archive_dirs': True,
+            'move_to_all_purge_dirs': True,
+            'download_stale_after': '30d',
+            'archive_stale_after': '30d',
+            'purge_stale_after': '1d',
+            'download_directories': [],
+            'archive_directories': [],
+            'purge_directories': []
+        }
+
+        with open(self.config_file_path, 'w+') as config_file:
+            config_file.write(yaml.dump(default_config))
+
     def load_config_file(self):
         """ Attempt to load the provided configuration file. If an error occurs
         while reading it, return a custom ConfigurationManager err """
+        if not os.path.exists(self.config_file_path):
+            self.write_default_config_values()
+
         with open(self.config_file_path, 'r') as openConfigFile:
             self.config_file_dict = yaml.load(openConfigFile.read())
 
