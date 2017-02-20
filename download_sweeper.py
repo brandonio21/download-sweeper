@@ -11,6 +11,7 @@
 import argparse
 import yaml
 import os
+import errno
 import re
 import time
 import shutil
@@ -20,8 +21,14 @@ from zipfile import ZipFile
 
 def get_config_path():
     home_dir = os.path.expanduser('~')
-    config_path = os.path.join('download-sweeper', 'config')
-    return os.path.join(os.path.join(home_dir, '.config'), config_path)
+    return os.path.join(os.path.join(home_dir, '.config'), 'download-sweeper')
+
+def assert_dir_exists(path):
+    try:
+        os.makedirs(path)
+    except OSError as exception:
+        if exception.errno != errno.EEXIST:
+            raise
 
 
 # Setup the commandline arguments
@@ -72,8 +79,8 @@ class ConfigKeyTranslator(object):
     PURGES = "purge"
     _translation_list = {
             DOWNLOADS: ('download_stale_after', 'download_directories'),
-            ARCHIVES: ('archive_stale_after','archive_directores'     ),
-            PURGES: ('purge_stale_after', 'purge_directores'        ) }
+            ARCHIVES: ('archive_stale_after','archive_directories'     ),
+            PURGES: ('purge_stale_after', 'purge_directories'        ) }
 
     def __init__(self, configType):
         self.configType = configType
@@ -217,6 +224,7 @@ class ConfigurationManager(object):
             'purge_directories': []
         }
 
+        assert_dir_exists(os.path.dirname(self.config_file_path))
         with open(self.config_file_path, 'w+') as config_file:
             config_file.write(yaml.dump(default_config))
 
