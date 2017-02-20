@@ -12,17 +12,14 @@ Requirements
 ------------
 By default, download-sweeper has the following dependencies:
 * Python 3
-* pip
-* virtualenv
+* python-yaml
 
 Installation/Run Instructions
 -------------------------
 To install and run `download-sweeper`, do the following:
 ```
 git clone https://github.com/brandonio21/download-sweeper
-make
-make install
-systemctl start download-sweeper
+python download_sweeper.py
 ```
 
 `download-sweeper` is also available in the [AUR]
@@ -31,6 +28,8 @@ systemctl start download-sweeper
 
 To enable the timer:
 ```
+install download-sweeper.service /usr/lib/systemd/system
+install download-sweeper.timer /usr/lib/systemd/system
 systemctl enable download-sweeper.timer
 systemctl start download-sweeper.timer
 ```
