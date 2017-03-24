@@ -22,8 +22,8 @@ git clone https://github.com/brandonio21/download-sweeper
 python download_sweeper.py
 ```
 
-`download-sweeper` is also available in the [AUR]
-(https://aur.archlinux.org/packages/download-sweeper/)
+`download-sweeper` is also available in the 
+[AUR](https://aur.archlinux.org/packages/download-sweeper/)
 
 
 To enable the timer:
