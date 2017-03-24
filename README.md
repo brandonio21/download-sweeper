@@ -12,7 +12,7 @@ Requirements
 ------------
 By default, download-sweeper has the following dependencies:
 * Python 3
-* python-yaml
+* PyYAML
 
 Installation/Run Instructions
 -------------------------
@@ -80,11 +80,6 @@ As a development philosophy, download-sweeper will be able to read all settings
 found within the configuraiton file as commandline arguments, meaning that it
 can be run without access to a configuration file.
 
-Further, download-sweeper leverages the isolation provided by virtualenv to 
-ensure that its dependencies (namely PyYaml) are not installed onto the users'
-entire system.
-
 ### Systemd Integration ###
-download-sweeper is primarily meant to be run on system startup; however, 
-service files will be instantiated when the user initiates "make" that will
-allow the user to customize the intervals at which download-sweeper runs.
+download-sweeper is primarily meant to be run on system startup, thus, some
+pre-made systemd files are provided in the repo.
