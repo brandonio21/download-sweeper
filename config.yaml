@@ -18,5 +18,5 @@ download_directories:
         - "/home/brandon/Downloads/"
 archive_directories:
         - "/home/brandon/.download-archive/"
-purge_directores:
+purge_directories:
         - "/home/brandon/.download-purge/"
