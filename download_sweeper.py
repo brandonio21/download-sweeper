@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 ###############################################################################
 # Filename: download-sweeper.py
 # Author:   Brandon Milton
