@@ -28,10 +28,10 @@ python download_sweeper.py
 
 To enable the timer:
 ```
-install download-sweeper.service /usr/lib/systemd/system
-install download-sweeper.timer /usr/lib/systemd/system
-systemctl enable download-sweeper.timer
-systemctl start download-sweeper.timer
+install download-sweeper.service /usr/lib/systemd/user
+install download-sweeper.timer /usr/lib/systemd/user
+systemctl --user enable download-sweeper.timer
+systemctl --user start download-sweeper.timer
 ```
 
 Note that by default the timer will run everyday and on system start.
