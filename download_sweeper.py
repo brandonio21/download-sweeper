@@ -312,7 +312,7 @@ class FileRecordKeeper(object):
             if retrievedFileContents is not None:
                 self.records = retrievedFileContents
 
-    def add_record(self, filePath, moveLocation, moveDate: str):
+    def add_record(self, filePath, moveLocation, moveDate):
         if not str(moveLocation) in self.records:
             self.records[str(moveLocation)] = {}
         self.records[str(moveLocation)][filePath] = moveDate

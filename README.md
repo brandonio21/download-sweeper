@@ -11,7 +11,7 @@ performed automatically.
 Requirements
 ------------
 By default, download-sweeper has the following dependencies:
-* Python 3
+* Python
 * PyYAML
 
 Installation/Run Instructions
