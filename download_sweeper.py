@@ -19,9 +19,15 @@ from datetime import datetime, timedelta
 from zipfile import ZipFile
 
 
-def get_config_path():
+def get_config_path(filename):
+    scriptdir = os.path.dirname(os.path.realpath(__file__))
+    local_file = os.path.join(scriptdir, filename)
+    if os.path.isfile(local_file):
+        return local_file
+
     home_dir = os.path.expanduser('~')
-    return os.path.join(os.path.join(home_dir, '.config'), 'download-sweeper')
+    cfgdir = os.path.join(os.path.join(home_dir, '.config'), 'download-sweeper')
+    return os.path.join(cfgdir, filename)
 
 
 def assert_dir_exists(path):
@@ -35,11 +41,11 @@ def assert_dir_exists(path):
 # Setup the commandline arguments
 argParser = argparse.ArgumentParser(description="Manage old downloaded files")
 argParser.add_argument('--config',
-                       default=os.path.join(get_config_path(), "config.yaml"),
+                       default=get_config_path("config.yaml"),
                        help='The location of the configuration file')
 
 argParser.add_argument('--records',
-                       default=os.path.join(get_config_path(), "records.yaml"),
+                       default=get_config_path("records.yaml"),
                        help='The location of the records file')
 
 # Functionality enable settings
