@@ -34,8 +34,13 @@ def assert_dir_exists(path):
 
 # Setup the commandline arguments
 argParser = argparse.ArgumentParser(description="Manage old downloaded files")
-argParser.add_argument('--config', default=get_config_path(),
-                       help='The location of the configuration directory')
+argParser.add_argument('--config',
+                       default=os.path.join(get_config_path(), "config.yaml"),
+                       help='The location of the configuration file')
+
+argParser.add_argument('--records',
+                       default=os.path.join(get_config_path(), "records.yaml"),
+                       help='The location of the records file')
 
 # Functionality enable settings
 archiveDownloadsGrp = argParser.add_mutually_exclusive_group()
@@ -225,14 +230,12 @@ class ConfigurationManager(object):
     class ConfigurationException(Exception):
         pass
 
-    CONFIG_FILE_NAME = "config.yaml"
-
     """ An object used to manage the download-sweeper configuration file
     and retrieve specific settings"""
     def __init__(self, configPath, argNamespace, loadFile=True):
         """ Create the configuration manager and load the specified data from
         the file if loadFile is true """
-        self.config_file_path = os.path.join(configPath, self.CONFIG_FILE_NAME)
+        self.config_file_path = configPath
         self.config_file_dict = {}
         self.argNamespace = argNamespace
 
@@ -290,10 +293,8 @@ class FileRecordKeeper(object):
     """ Keeps track of while files have been moved, where they have been moved
     to, and on what date/time they have been moved """
 
-    DEFAULT_RECORD_FILE = 'records.yaml'
-
-    def __init__(self, configPath, recordFile=DEFAULT_RECORD_FILE):
-        self.recordFileLocation = os.path.join(configPath, recordFile)
+    def __init__(self, configPath):
+        self.recordFileLocation = configPath
         self.records = {}  # movLoc: {Filepath: movDate}
 
     def load_existing_records(self):
@@ -477,7 +478,7 @@ if __name__ == "__main__":
     parsed_args = argParser.parse_args()
     configMgr = ConfigurationManager(parsed_args.config, parsed_args)
     sweeperObj = Sweeper(configMgr)
-    records = FileRecordKeeper(parsed_args.config)
+    records = FileRecordKeeper(parsed_args.records)
     records.load_existing_records()
     records.clean_records()
     load_untracked_archives_into_record(sweeperObj, records)
