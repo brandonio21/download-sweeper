@@ -307,8 +307,8 @@ class FileRecordKeeper(object):
         """ Loads the existing records from the record file """
         if not os.path.isfile(self.recordFileLocation):
             self.records = {
-                "archive": {},
-                "purge": {}
+                ConfigKeyTranslator.ARCHIVES: {},
+                ConfigKeyTranslator.PURGES: {}
             }
             return
 
