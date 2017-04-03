@@ -16,7 +16,7 @@ purge_stale_after: "1d"
 # Directory configuraiton settings
 download_directories:
         - "/home/brandon/Downloads/"
-archive_directores:
+archive_directories:
         - "/home/brandon/.download-archive/"
 purge_directores:
         - "/home/brandon/.download-purge/"
