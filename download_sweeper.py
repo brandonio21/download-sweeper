@@ -357,7 +357,14 @@ def move_file_to_path(path, file):
     oldUid = oldFileDetails.st_uid
     oldGid = oldFileDetails.st_gid
     shutil.move(file.path, newFilePath)
-    os.chown(newFilePath, oldUid, oldGid)
+
+    newFileDetails = os.stat(newFilePath)
+    newUid = newFileDetails.st_uid
+    newGid = newFileDetails.st_gid
+
+    if newUid != oldUid or newGid != oldUid:
+        os.chown(newFilePath, oldUid, oldGid)
+
     return newFilePath
 
 
