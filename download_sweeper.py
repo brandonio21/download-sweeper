@@ -306,7 +306,12 @@ class FileRecordKeeper(object):
     def load_existing_records(self):
         """ Loads the existing records from the record file """
         if not os.path.isfile(self.recordFileLocation):
+            self.records = {
+                "archive": {},
+                "purge": {}
+            }
             return
+
         with open(self.recordFileLocation, 'r') as openRecordFile:
             retrievedFileContents = yaml.load(openRecordFile.read())
             if retrievedFileContents is not None:
