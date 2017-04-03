@@ -13,7 +13,7 @@ download_stale_after: "30d"
 archive_stale_after: "30d"
 purge_stale_after: "1d"
 
-# Directory configuraiton settings
+# Directory configuration settings
 download_directories:
         - "/home/brandon/Downloads/"
 archive_directories:
