@@ -20,3 +20,5 @@ archive_directories:
         - "/home/brandon/.download-archive/"
 purge_directories:
         - "/home/brandon/.download-purge/"
+
+blacklisted_paths: []

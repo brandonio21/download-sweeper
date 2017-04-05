@@ -181,6 +181,12 @@ class Sweeper(object):
                 for file in (files+dirs):
                     fullFilePath = os.path.join(root, file)
 
+                    # Skip paths in blacklist
+                    if fullFilePath in self.configManager.get_option_value(
+                            "blacklisted_paths"):
+                        print(fullFilePath)
+                        continue
+
                     # Skip directories that are not empty
                     if (os.path.isdir(fullFilePath) and
                             not len(os.listdir(fullFilePath)) == 0):
@@ -245,8 +251,25 @@ class ConfigurationManager(object):
         self.config_file_dict = {}
         self.argNamespace = argNamespace
 
+        self.default_config = {
+            'archive_downloads': True,
+            'purge_archives': True,
+            'compress_archives': True,
+            'delete_from_purge': True,
+            'move_to_all_archive_dirs': True,
+            'move_to_all_purge_dirs': True,
+            'download_stale_after': '30d',
+            'archive_stale_after': '30d',
+            'purge_stale_after': '1d',
+            'download_directories': [],
+            'archive_directories': [],
+            'purge_directories': [],
+            'blacklisted_paths': []
+        }
+
         if loadFile:
             self.load_config_file()
+
 
     def __str__(self):
         """ Return a human-readable representation of this configuration
@@ -259,24 +282,9 @@ class ConfigurationManager(object):
         return self.__str__()
 
     def write_default_config_values(self):
-        default_config = {
-            'archive_downloads': True,
-            'purge_archives': True,
-            'compress_archives': True,
-            'delete_from_purge': True,
-            'move_to_all_archive_dirs': True,
-            'move_to_all_purge_dirs': True,
-            'download_stale_after': '30d',
-            'archive_stale_after': '30d',
-            'purge_stale_after': '1d',
-            'download_directories': [],
-            'archive_directories': [],
-            'purge_directories': []
-        }
-
         assert_dir_exists(os.path.dirname(self.config_file_path))
         with open(self.config_file_path, 'w+') as config_file:
-            config_file.write(yaml.dump(default_config))
+            config_file.write(yaml.dump(self.default_config))
 
     def load_config_file(self):
         """ Attempt to load the provided configuration file. If an error occurs
@@ -292,7 +300,9 @@ class ConfigurationManager(object):
         commandline args take precedence over config file """
         argDictionary = vars(self.argNamespace)
         return (argDictionary[key] if key in argDictionary else
-                self.config_file_dict[key])
+                self.config_file_dict[key] if key in self.config_file_dict else
+                self.default_config[key])
+                
 
 
 class FileRecordKeeper(object):
