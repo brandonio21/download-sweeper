@@ -28,8 +28,8 @@ python download_sweeper.py
 
 To enable the timer:
 ```
-install download-sweeper.service /usr/lib/systemd/user
-install download-sweeper.timer /usr/lib/systemd/user
+cp download-sweeper.service /usr/lib/systemd/user
+cp download-sweeper.timer /usr/lib/systemd/user
 systemctl --user enable download-sweeper.timer
 systemctl --user start download-sweeper.timer
 ```
