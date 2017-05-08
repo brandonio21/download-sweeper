@@ -15,6 +15,7 @@ import errno
 import re
 import time
 import shutil
+import fnmatch
 from datetime import datetime, timedelta
 from zipfile import ZipFile
 
@@ -182,9 +183,14 @@ class Sweeper(object):
                     fullFilePath = os.path.join(root, file)
 
                     # Skip paths in blacklist
-                    if fullFilePath in self.configManager.get_option_value(
-                            "blacklisted_paths"):
-                        print(fullFilePath)
+                    should_skip = False
+                    for blacklist_pattern in self.configManager.get_option_value("blacklisted_paths"):
+                        if fnmatch.fnmatch(fullFilePath, blacklist_pattern):
+                            should_skip = True
+                            break
+
+
+                    if should_skip:
                         continue
 
                     # Skip directories that are not empty
@@ -359,6 +365,7 @@ class FileRecordKeeper(object):
             self.delete_record(badRecord[0], badRecord[1])
 
     def write_records(self):
+        assert_dir_exists(os.path.dirname(self.recordFileLocation))
         with open(self.recordFileLocation, 'w+') as openRecordFile:
             openRecordFile.write(yaml.dump(self.records))
 
@@ -377,8 +384,11 @@ def move_file_to_path(path, file):
     newUid = newFileDetails.st_uid
     newGid = newFileDetails.st_gid
 
-    if newUid != oldUid or newGid != oldUid:
-        os.chown(newFilePath, oldUid, oldGid)
+    if (newUid != oldUid or newGid != oldUid):
+        try:
+            os.chown(newFilePath, oldUid, oldGid)
+        except AttributeError:
+            pass
 
     return newFilePath
 
@@ -397,7 +407,12 @@ def move_downloads_to_archive(sweeper, configurationManager, recordKeeper):
         if os.path.isfile(file.path):
             for archivePath in configurationManager.get_option_value(
                     archiveConfigTranslator.path_key):
-                archivedFilePath = move_file_to_path(archivePath, file)
+                try:
+                    archivedFilePath = move_file_to_path(archivePath, file)
+                except:
+                    print("Error moving {0} to archives".format(file.path))
+                    continue
+
                 recordKeeper.add_record(archivedFilePath,
                                         ConfigKeyTranslator.ARCHIVES,
                                         time.ctime())
@@ -423,7 +438,12 @@ def move_archives_to_purge(sweeper, configurationManager, recordKeeper):
                     purgeConfigTranslator.path_key):
                 recordKeeper.delete_record(file.path,
                                            ConfigKeyTranslator.ARCHIVES)
-                purgedFilePath = move_file_to_path(purgePath, file)
+                try:
+                    purgedFilePath = move_file_to_path(purgePath, file)
+                except:
+                    print("Error moving {0} to purge".format(file.path))
+                    continue
+
                 recordKeeper.add_record(purgedFilePath,
                                         ConfigKeyTranslator.PURGES,
                                         time.ctime())
