@@ -110,6 +110,7 @@ class ConfigKeyTranslator(object):
     DOWNLOADS = "downloads"
     ARCHIVES = "archive"
     PURGES = "purge"
+
     _translation_list = {
         DOWNLOADS: ('download_stale_after', 'download_directories'),
         ARCHIVES: ('archive_stale_after', 'archive_directories'),
@@ -125,9 +126,9 @@ class ConfigKeyTranslator(object):
 
 class File(object):
 
-    def __init__(self, path, filename):
+    def __init__(self, path):
         self.path = path
-        self.filename = filename
+        self.filename = os.path.basename(path)
 
 
 class ConfigFileTimeDeltaParser(object):
@@ -170,6 +171,58 @@ class Sweeper(object):
         """ Inititalizes the Sweeper with a certain set of configurations """
         self.configManager = configManager
 
+    def file_is_stale(self, path, configTranslator, recordKeeper):
+        """
+        Determines if a path is stale by getting its last access time (or the time it was
+        added into archives/purge) and adding the configuration value to it.
+        """
+        if (configTranslator.configType ==
+                ConfigKeyTranslator.DOWNLOADS):
+            lastAccessCDate = os.lstat(path).st_atime
+            lastAccessDatetime = datetime.strptime(
+                time.ctime(lastAccessCDate),
+                "%a %b %d %H:%M:%S %Y"
+            )
+        else:
+            lastAccessDatetime = datetime.strptime(
+                recordKeeper.get_record(
+                    configTranslator.configType,
+                    path
+                ),
+                "%a %b %d %H:%M:%S %Y"
+            )
+
+        adjLastAccessTime = (
+            lastAccessDatetime +
+            ConfigFileTimeDeltaParser.timedelta_from_config_str(
+                self.configManager.get_option_value(
+                    configTranslator.stale_limit_key
+                )
+            )
+        )
+
+        if adjLastAccessTime < datetime.today():
+            return True
+        else:
+            return False
+
+    def dir_is_stale(self, path, configTranslator, recordKeeper):
+        for root, dirs, files in os.walk(path):
+            for file in files:
+                if not self.file_is_stale(file, configTranslator, recordKeeper):
+                    return False
+
+        return True
+
+
+    def path_should_be_skipped(self, path):
+        for blacklist_pattern in self.configManager.get_option_value("blacklisted_paths"):
+            if fnmatch.fnmatch(path, blacklist_pattern):
+                return True
+
+        return False
+
+
     def get_stale_file_paths(self, configTranslator, recordKeeper):
         """
         Gets the paths of all stale files in the certain type of directory.
@@ -179,71 +232,44 @@ class Sweeper(object):
                         directory we will be searching
         """
         stalePaths = []
-        for directoryPath in self.configManager.get_option_value(
-                configTranslator.path_key):
-            for root, dirs, files in os.walk(directoryPath):
-                for file in (files+dirs):
-                    fullFilePath = os.path.join(root, file)
+        files, directories = self.get_all_file_paths(configTranslator)
 
-                    # Skip paths in blacklist
-                    should_skip = False
-                    for blacklist_pattern in self.configManager.get_option_value("blacklisted_paths"):
-                        if fnmatch.fnmatch(fullFilePath, blacklist_pattern):
-                            should_skip = True
-                            break
+        # First, let's check for stale files
+        for file in files:
+            if self.path_should_be_skipped(file):
+                continue
 
+            if self.file_is_stale(file, configTranslator, recordKeeper):
+                stalePaths.append(File(file))
 
-                    if should_skip:
-                        continue
+        # Great, now let's check for stale directories (all files inside are stale)
+        for directory in directories:
+            if self.path_should_be_skipped(directory):
+                continue
 
-                    # Skip directories that are not empty
-                    if (os.path.isdir(fullFilePath) and
-                            not len(os.listdir(fullFilePath)) == 0):
-                        continue
-
-                    if (configTranslator.configType ==
-                            ConfigKeyTranslator.DOWNLOADS):
-                        lastAccessCDate = os.lstat(fullFilePath).st_atime
-                        lastAccessDatetime = datetime.strptime(
-                            time.ctime(lastAccessCDate),
-                            "%a %b %d %H:%M:%S %Y"
-                        )
-                    else:
-                        lastAccessDatetime = datetime.strptime(
-                            recordKeeper.get_record(
-                                configTranslator.configType,
-                                fullFilePath
-                            ),
-                            "%a %b %d %H:%M:%S %Y"
-                        )
-
-                    adjLastAccessTime = (
-                        lastAccessDatetime +
-                        ConfigFileTimeDeltaParser.timedelta_from_config_str(
-                            self.configManager.get_option_value(
-                                configTranslator.stale_limit_key
-                            )
-                        )
-                    )
-
-                    if adjLastAccessTime < datetime.today():
-                        stalePaths.append(File(fullFilePath, file))
+            if self.dir_is_stale(directory, configTranslator, recordKeeper):
+                stalePaths.append(File(directory))
 
         return stalePaths
 
     def get_all_file_paths(self, configTranslator):
         """
-        Gets the paths of all files in the certain type of directory.
+        Gets the paths of all files and directories in the certain type of directory.
 
+        Return:
+        ([files], [directories])
         """
-        filePaths = []
+
+        files, directories = [], []
         for directoryPath in self.configManager.get_option_value(
                 configTranslator.path_key):
-            for root, dirs, files in os.walk(directoryPath):
-                for file in files:
-                    filePaths.append(os.path.join(root, file))
+            
+            for root, dirs, filenames in os.walk(directoryPath):
+                files.extend([os.path.join(root, file) for file in filenames])
+                directories.extend([os.path.join(root, directory) for directory in dirs])
+                break
 
-        return filePaths
+        return files, directories
 
 
 class ConfigurationManager(object):
@@ -361,7 +387,7 @@ class FileRecordKeeper(object):
         badRecords = []
         for movLocation in self.records:
             for filePath in self.records[movLocation]:
-                if not os.path.isfile(filePath):
+                if not os.path.exists(filePath):
                     badRecords.append((filePath, movLocation))
 
         for badRecord in badRecords:
@@ -407,24 +433,21 @@ def move_downloads_to_archive(sweeper, configurationManager, recordKeeper):
                                               recordKeeper)
 
     for file in staleFiles:
-        if os.path.isfile(file.path):
-            for archivePath in configurationManager.get_option_value(
-                    archiveConfigTranslator.path_key):
-                try:
-                    archivedFilePath = move_file_to_path(archivePath, file)
-                except:
-                    print("Error moving {0} to archives".format(file.path))
-                    continue
+        for archivePath in configurationManager.get_option_value(
+                archiveConfigTranslator.path_key):
+            try:
+                archivedFilePath = move_file_to_path(archivePath, file)
+            except:
+                print("Error moving {0} to archives".format(file.path))
+                continue
 
-                recordKeeper.add_record(archivedFilePath,
-                                        ConfigKeyTranslator.ARCHIVES,
-                                        time.ctime())
+            recordKeeper.add_record(archivedFilePath,
+                                    ConfigKeyTranslator.ARCHIVES,
+                                    time.ctime())
 
-                if not configurationManager.get_option_value(
-                        'move_to_all_archive_dirs'):
-                    break
-        else:
-            os.rmdir(file.path)
+            if not configurationManager.get_option_value(
+                    'move_to_all_archive_dirs'):
+                break
 
 
 def move_archives_to_purge(sweeper, configurationManager, recordKeeper):
@@ -436,25 +459,22 @@ def move_archives_to_purge(sweeper, configurationManager, recordKeeper):
                                               recordKeeper)
 
     for file in staleFiles:
-        if os.path.isfile(file.path):
-            for purgePath in configurationManager.get_option_value(
-                    purgeConfigTranslator.path_key):
-                recordKeeper.delete_record(file.path,
-                                           ConfigKeyTranslator.ARCHIVES)
-                try:
-                    purgedFilePath = move_file_to_path(purgePath, file)
-                except:
-                    print("Error moving {0} to purge".format(file.path))
-                    continue
+        for purgePath in configurationManager.get_option_value(
+                purgeConfigTranslator.path_key):
+            recordKeeper.delete_record(file.path,
+                                        ConfigKeyTranslator.ARCHIVES)
+            try:
+                purgedFilePath = move_file_to_path(purgePath, file)
+            except:
+                print("Error moving {0} to purge".format(file.path))
+                continue
 
-                recordKeeper.add_record(purgedFilePath,
-                                        ConfigKeyTranslator.PURGES,
-                                        time.ctime())
-                if not configurationManager.get_option_value(
-                        'move_to_all_purge_dirs'):
-                    break
-        else:
-            os.rmdir(file.path)
+            recordKeeper.add_record(purgedFilePath,
+                                    ConfigKeyTranslator.PURGES,
+                                    time.ctime())
+            if not configurationManager.get_option_value(
+                    'move_to_all_purge_dirs'):
+                break
 
 
 def delete_from_purge(sweeper, configurationMangager, recordKeeper):
@@ -464,10 +484,7 @@ def delete_from_purge(sweeper, configurationMangager, recordKeeper):
 
     # Delete all stale purge files
     for file in staleFiles:
-        if os.path.isdir(file.path):
-            shutil.rmtree(file.path)
-        else:
-            os.remove(file.path)
+        remove_path(file.path)
 
 
 def is_zip_extension(extension):
@@ -480,6 +497,11 @@ def zip_path(filePath):
         zipFile.write(filePath)
     return zipPath
 
+def remove_path(path):
+    if os.path.isfile(path):
+        os.remove(path)
+    else:
+        shutil.rmtree(path)
 
 def compress_archive_files(configurationManager, recordKeeper):
     # For now there will be no compression method available except for ZIP
@@ -489,7 +511,7 @@ def compress_archive_files(configurationManager, recordKeeper):
         if not is_zip_extension(fileExtension):
             try:
                 zipPath = zip_path(filePath)
-                os.remove(filePath)
+                remove_path(filePath)
                 recordedDatetime = recordKeeper.get_record(
                     ConfigKeyTranslator.ARCHIVES, filePath
                 )
@@ -504,17 +526,17 @@ def compress_archive_files(configurationManager, recordKeeper):
 
 def load_untracked_archives_into_record(sweeper, records):
     archiveConfigTranslator = ConfigKeyTranslator(ConfigKeyTranslator.ARCHIVES)
-    archivedFiles = sweeper.get_all_file_paths(archiveConfigTranslator)
+    archivedFiles, archivedDirs = sweeper.get_all_file_paths(archiveConfigTranslator)
     add_unknown_files_to_record(ConfigKeyTranslator.ARCHIVES,
                                 records,
-                                archivedFiles)
+                                archivedFiles + archivedDirs)
 
 
 def load_untracked_purges_into_record(sweeper, records):
     purgeConfigTranslator = ConfigKeyTranslator(ConfigKeyTranslator.PURGES)
-    purgedFiles = sweeper.get_all_file_paths(purgeConfigTranslator)
+    purgedFiles, purgedDirs = sweeper.get_all_file_paths(purgeConfigTranslator)
     add_unknown_files_to_record(
-        ConfigKeyTranslator.PURGES, records, purgedFiles
+        ConfigKeyTranslator.PURGES, records, purgedFiles + purgedDirs
     )
 
 
