@@ -9,7 +9,6 @@
 # configuration and moves them or removes them according to the user's spec.
 ###############################################################################
 import argparse
-import yaml
 import os
 import errno
 import re
@@ -18,6 +17,8 @@ import shutil
 import fnmatch
 from datetime import datetime, timedelta
 from zipfile import ZipFile
+
+import yaml # PyYAML
 
 
 def get_config_path(filename):
@@ -522,8 +523,7 @@ def add_unknown_files_to_record(locationType, records, paths):
         if not records.record_exists(locationType, path):
             records.add_record(path, locationType, time.ctime())
 
-
-if __name__ == "__main__":
+def main():
     # Parse the arguments
     parsed_args = argParser.parse_args()
     configMgr = ConfigurationManager(parsed_args.config, parsed_args)
@@ -547,3 +547,8 @@ if __name__ == "__main__":
         delete_from_purge(sweeperObj, configMgr, records)
 
     records.write_records()
+
+
+
+if __name__ == "__main__":
+    main()
