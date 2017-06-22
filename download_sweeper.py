@@ -43,11 +43,13 @@ def assert_dir_exists(path):
 argParser = argparse.ArgumentParser(description="Manage old downloaded files")
 argParser.add_argument('--config',
                        default=get_config_path("config.yaml"),
-                       help='The location of the configuration file')
+                       help='The location of the configuration file, default: {0}'.format(
+                           get_config_path("config.yaml")))
 
 argParser.add_argument('--records',
                        default=get_config_path("records.yaml"),
-                       help='The location of the records file')
+                       help='The location of the records file, default: {0}'.format(
+                           get_config_path("records.yaml")))
 
 # Functionality enable settings
 archiveDownloadsGrp = argParser.add_mutually_exclusive_group()
