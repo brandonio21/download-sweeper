@@ -9,16 +9,16 @@
 # configuration and moves them or removes them according to the user's spec.
 ###############################################################################
 import argparse
-import os
 import errno
-import re
-import time
-import shutil
 import fnmatch
+import os
+import re
+import shutil
+import time
 from datetime import datetime, timedelta
 from zipfile import ZipFile
 
-import yaml # PyYAML
+import yaml  # PyYAML
 
 
 def get_config_path(filename):
@@ -27,8 +27,8 @@ def get_config_path(filename):
     if os.path.isfile(local_file):
         return local_file
 
-    home_dir = os.path.expanduser('~')
-    cfgdir = os.path.join(os.path.join(home_dir, '.config'), 'download-sweeper')
+    home_dir = os.path.expanduser("~")
+    cfgdir = os.path.join(os.path.join(home_dir, ".config"), "download-sweeper")
     return os.path.join(cfgdir, filename)
 
 
@@ -42,67 +42,91 @@ def assert_dir_exists(path):
 
 # Setup the commandline arguments
 argParser = argparse.ArgumentParser(description="Manage old downloaded files")
-argParser.add_argument('--config',
-                       default=get_config_path("config.yaml"),
-                       help='The location of the configuration file, default: {0}'.format(
-                           get_config_path("config.yaml")))
+argParser.add_argument(
+    "--config",
+    default=get_config_path("config.yaml"),
+    help="The location of the configuration file, default: {0}".format(
+        get_config_path("config.yaml")
+    ),
+)
 
-argParser.add_argument('--records',
-                       default=get_config_path("records.yaml"),
-                       help='The location of the records file, default: {0}'.format(
-                           get_config_path("records.yaml")))
+argParser.add_argument(
+    "--records",
+    default=get_config_path("records.yaml"),
+    help="The location of the records file, default: {0}".format(
+        get_config_path("records.yaml")
+    ),
+)
 
 # Functionality enable settings
 archiveDownloadsGrp = argParser.add_mutually_exclusive_group()
 archiveDownloadsGrp.add_argument(
-    '--archive-downloads', default=argparse.SUPPRESS,
-    action='store_true', help='''Downloads should be archived
-    once they become stale''', dest='archive_downloads'
+    "--archive-downloads",
+    default=argparse.SUPPRESS,
+    action="store_true",
+    help="""Downloads should be archived
+    once they become stale""",
+    dest="archive_downloads",
 )
 archiveDownloadsGrp.add_argument(
-    '--no-archive-downloads',
-    default=argparse.SUPPRESS, action='store_false',
-    help='''Downloads should not be moved once they become
-    stale''', dest='archive_downloads'
+    "--no-archive-downloads",
+    default=argparse.SUPPRESS,
+    action="store_false",
+    help="""Downloads should not be moved once they become
+    stale""",
+    dest="archive_downloads",
 )
 
 purgeArchivesGrp = argParser.add_mutually_exclusive_group()
 purgeArchivesGrp.add_argument(
-    '--purge-archives', default=argparse.SUPPRESS,
-    action='store_true', help='''Archives should be moved
-    purged when they become stale''',
-    dest='purge_archives'
+    "--purge-archives",
+    default=argparse.SUPPRESS,
+    action="store_true",
+    help="""Archives should be moved
+    purged when they become stale""",
+    dest="purge_archives",
 )
 purgeArchivesGrp.add_argument(
-    '--no-purge-archives', default=argparse.SUPPRESS,
-    help='''Archives should not be moved once they become
-    stale''', action='store_false', dest='purge_archives'
+    "--no-purge-archives",
+    default=argparse.SUPPRESS,
+    help="""Archives should not be moved once they become
+    stale""",
+    action="store_false",
+    dest="purge_archives",
 )
 
 compressArchivesGrp = argParser.add_mutually_exclusive_group()
 compressArchivesGrp.add_argument(
-    '--compress-archives', default=argparse.SUPPRESS,
-    help='''Archived files should be compressed''',
-    action='store_true', dest='compress_archives'
+    "--compress-archives",
+    default=argparse.SUPPRESS,
+    help="""Archived files should be compressed""",
+    action="store_true",
+    dest="compress_archives",
 )
 compressArchivesGrp.add_argument(
-    '--no-compress-archives',
-    default=argparse.SUPPRESS, help='''Archived files should
-    remain uncompressed''', action='store_false',
-    dest='compress_archives'
+    "--no-compress-archives",
+    default=argparse.SUPPRESS,
+    help="""Archived files should
+    remain uncompressed""",
+    action="store_false",
+    dest="compress_archives",
 )
 
 deleteFromPurgeGrp = argParser.add_mutually_exclusive_group()
 deleteFromPurgeGrp.add_argument(
-    '--delete-from-purge', default=argparse.SUPPRESS,
-    help='''Files in the purge directory should be deleted''',
-    action='store_true', dest='delete_from_purge'
+    "--delete-from-purge",
+    default=argparse.SUPPRESS,
+    help="""Files in the purge directory should be deleted""",
+    action="store_true",
+    dest="delete_from_purge",
 )
 deleteFromPurgeGrp.add_argument(
-    '--no-delete-from-purge',
-    default=argparse.SUPPRESS, help='''Files in the purge
-    directory should not be deleted''', action='store_false',
-    dest='delete_from_purge'
+    "--no-delete-from-purge",
+    default=argparse.SUPPRESS,
+    help="""Files in the purge
+    directory should not be deleted""",
+    action="store_false",
+    dest="delete_from_purge",
 )
 
 
@@ -112,20 +136,17 @@ class ConfigKeyTranslator(object):
     PURGES = "purge"
 
     _translation_list = {
-        DOWNLOADS: ('download_stale_after', 'download_directories'),
-        ARCHIVES: ('archive_stale_after', 'archive_directories'),
-        PURGES: ('purge_stale_after', 'purge_directories')
+        DOWNLOADS: ("download_stale_after", "download_directories"),
+        ARCHIVES: ("archive_stale_after", "archive_directories"),
+        PURGES: ("purge_stale_after", "purge_directories"),
     }
 
     def __init__(self, configType):
         self.configType = configType
-        self.stale_limit_key, self.path_key = (
-            self._translation_list[configType]
-        )
+        self.stale_limit_key, self.path_key = self._translation_list[configType]
 
 
 class File(object):
-
     def __init__(self, path):
         self.path = path
         self.filename = os.path.basename(path)
@@ -134,7 +155,7 @@ class File(object):
 class ConfigFileTimeDeltaParser(object):
     DAYS_KEY = "d"
     WEEKS_KEY = "w"
-    re_pattern = re.compile('^(\d+)([a-z])$')
+    re_pattern = re.compile("^(\d+)([a-z])$")
 
     class InvalidConfigTimeStrException(Exception):
         pass
@@ -144,10 +165,10 @@ class ConfigFileTimeDeltaParser(object):
 
     @classmethod
     def _translate_key_to_deltakey_dict(cls, key, value):
-        translation_dict = {'d': 'days', 'w': 'weeks'}
+        translation_dict = {"d": "days", "w": "weeks"}
         if key not in translation_dict:
             raise ConfigFileTimeDeltaParser.InvalidConfigTimeKeyException(
-                '{} is an invalid key'.format(key)
+                "{} is an invalid key".format(key)
             )
         return {translation_dict[key]: int(value)}
 
@@ -156,16 +177,19 @@ class ConfigFileTimeDeltaParser(object):
         matchedPattern = cls.re_pattern.match(configStr)
         if matchedPattern is None or not len(matchedPattern.groups()) == 2:
             raise cls.InvalidConfigTimeStrException(
-                    '{} is an invalid time str'.format(configStr))
+                "{} is an invalid time str".format(configStr)
+            )
 
         return timedelta(
-                **cls._translate_key_to_deltakey_dict(
-                    matchedPattern.group(2), matchedPattern.group(1)))
+            **cls._translate_key_to_deltakey_dict(
+                matchedPattern.group(2), matchedPattern.group(1)
+            )
+        )
 
 
 class Sweeper(object):
-    """ An object used to sweep certain directories and move their stale
-    contents to the next directory """
+    """An object used to sweep certain directories and move their stale
+    contents to the next directory"""
 
     def __init__(self, configManager):
         """ Inititalizes the Sweeper with a certain set of configurations """
@@ -176,28 +200,21 @@ class Sweeper(object):
         Determines if a path is stale by getting its last access time (or the time it was
         added into archives/purge) and adding the configuration value to it.
         """
-        if (configTranslator.configType ==
-                ConfigKeyTranslator.DOWNLOADS):
+        if configTranslator.configType == ConfigKeyTranslator.DOWNLOADS:
             lastAccessCDate = os.lstat(path).st_atime
             lastAccessDatetime = datetime.strptime(
-                time.ctime(lastAccessCDate),
-                "%a %b %d %H:%M:%S %Y"
+                time.ctime(lastAccessCDate), "%a %b %d %H:%M:%S %Y"
             )
         else:
             lastAccessDatetime = datetime.strptime(
-                recordKeeper.get_record(
-                    configTranslator.configType,
-                    path
-                ),
-                "%a %b %d %H:%M:%S %Y"
+                recordKeeper.get_record(configTranslator.configType, path),
+                "%a %b %d %H:%M:%S %Y",
             )
 
         adjLastAccessTime = (
-            lastAccessDatetime +
-            ConfigFileTimeDeltaParser.timedelta_from_config_str(
-                self.configManager.get_option_value(
-                    configTranslator.stale_limit_key
-                )
+            lastAccessDatetime
+            + ConfigFileTimeDeltaParser.timedelta_from_config_str(
+                self.configManager.get_option_value(configTranslator.stale_limit_key)
             )
         )
 
@@ -214,14 +231,14 @@ class Sweeper(object):
 
         return True
 
-
     def path_should_be_skipped(self, path):
-        for blacklist_pattern in self.configManager.get_option_value("blacklisted_paths"):
+        for blacklist_pattern in self.configManager.get_option_value(
+            "blacklisted_paths"
+        ):
             if fnmatch.fnmatch(path, blacklist_pattern):
                 return True
 
         return False
-
 
     def get_stale_file_paths(self, configTranslator, recordKeeper):
         """
@@ -262,55 +279,58 @@ class Sweeper(object):
 
         files, directories = [], []
         for directoryPath in self.configManager.get_option_value(
-                configTranslator.path_key):
-            
+            configTranslator.path_key
+        ):
+
             for root, dirs, filenames in os.walk(directoryPath):
                 files.extend([os.path.join(root, file) for file in filenames])
-                directories.extend([os.path.join(root, directory) for directory in dirs])
+                directories.extend(
+                    [os.path.join(root, directory) for directory in dirs]
+                )
                 break
 
         return files, directories
 
 
 class ConfigurationManager(object):
-
     class ConfigurationException(Exception):
         pass
 
     """ An object used to manage the download-sweeper configuration file
     and retrieve specific settings"""
+
     def __init__(self, configPath, argNamespace, loadFile=True):
-        """ Create the configuration manager and load the specified data from
-        the file if loadFile is true """
+        """Create the configuration manager and load the specified data from
+        the file if loadFile is true"""
         self.config_file_path = configPath
         self.config_file_dict = {}
         self.argNamespace = argNamespace
 
         self.default_config = {
-            'archive_downloads': True,
-            'purge_archives': True,
-            'compress_archives': True,
-            'delete_from_purge': True,
-            'move_to_all_archive_dirs': True,
-            'move_to_all_purge_dirs': True,
-            'download_stale_after': '30d',
-            'archive_stale_after': '30d',
-            'purge_stale_after': '1d',
-            'download_directories': [],
-            'archive_directories': [],
-            'purge_directories': [],
-            'blacklisted_paths': []
+            "archive_downloads": True,
+            "purge_archives": True,
+            "compress_archives": True,
+            "delete_from_purge": True,
+            "move_to_all_archive_dirs": True,
+            "move_to_all_purge_dirs": True,
+            "download_stale_after": "30d",
+            "archive_stale_after": "30d",
+            "purge_stale_after": "1d",
+            "download_directories": [],
+            "archive_directories": [],
+            "purge_directories": [],
+            "blacklisted_paths": [],
         }
 
         if loadFile:
             self.load_config_file()
 
-
     def __str__(self):
-        """ Return a human-readable representation of this configuration
-        manager with all the details provied """
-        return ("ConfigurationManager with config path {} loaded as dict {}"
-                .format(self.config_file_path, self.config_file_dict))
+        """Return a human-readable representation of this configuration
+        manager with all the details provied"""
+        return "ConfigurationManager with config path {} loaded as dict {}".format(
+            self.config_file_path, self.config_file_dict
+        )
 
     def __repr__(self):
         """ Return a human-readable representation by delegating to __str__ """
@@ -318,31 +338,34 @@ class ConfigurationManager(object):
 
     def write_default_config_values(self):
         assert_dir_exists(os.path.dirname(self.config_file_path))
-        with open(self.config_file_path, 'w+') as config_file:
+        with open(self.config_file_path, "w+") as config_file:
             config_file.write(yaml.dump(self.default_config))
 
     def load_config_file(self):
-        """ Attempt to load the provided configuration file. If an error occurs
-        while reading it, return a custom ConfigurationManager err """
+        """Attempt to load the provided configuration file. If an error occurs
+        while reading it, return a custom ConfigurationManager err"""
         if not os.path.exists(self.config_file_path):
             self.write_default_config_values()
 
-        with open(self.config_file_path, 'r') as openConfigFile:
+        with open(self.config_file_path, "r") as openConfigFile:
             self.config_file_dict = yaml.load(openConfigFile.read())
 
     def get_option_value(self, key):
-        """ Returns the value of the provided option key. The values stored in
-        commandline args take precedence over config file """
+        """Returns the value of the provided option key. The values stored in
+        commandline args take precedence over config file"""
         argDictionary = vars(self.argNamespace)
-        return (argDictionary[key] if key in argDictionary else
-                self.config_file_dict[key] if key in self.config_file_dict else
-                self.default_config[key])
-                
+        return (
+            argDictionary[key]
+            if key in argDictionary
+            else self.config_file_dict[key]
+            if key in self.config_file_dict
+            else self.default_config[key]
+        )
 
 
 class FileRecordKeeper(object):
-    """ Keeps track of while files have been moved, where they have been moved
-    to, and on what date/time they have been moved """
+    """Keeps track of while files have been moved, where they have been moved
+    to, and on what date/time they have been moved"""
 
     def __init__(self, configPath):
         self.recordFileLocation = configPath
@@ -353,11 +376,11 @@ class FileRecordKeeper(object):
         if not os.path.isfile(self.recordFileLocation):
             self.records = {
                 ConfigKeyTranslator.ARCHIVES: {},
-                ConfigKeyTranslator.PURGES: {}
+                ConfigKeyTranslator.PURGES: {},
             }
             return
 
-        with open(self.recordFileLocation, 'r') as openRecordFile:
+        with open(self.recordFileLocation, "r") as openRecordFile:
             retrievedFileContents = yaml.load(openRecordFile.read())
             if retrievedFileContents is not None:
                 self.records = retrievedFileContents
@@ -395,7 +418,7 @@ class FileRecordKeeper(object):
 
     def write_records(self):
         assert_dir_exists(os.path.dirname(self.recordFileLocation))
-        with open(self.recordFileLocation, 'w+') as openRecordFile:
+        with open(self.recordFileLocation, "w+") as openRecordFile:
             openRecordFile.write(yaml.dump(self.records))
 
 
@@ -413,7 +436,7 @@ def move_file_to_path(path, file):
     newUid = newFileDetails.st_uid
     newGid = newFileDetails.st_gid
 
-    if (newUid != oldUid or newGid != oldUid):
+    if newUid != oldUid or newGid != oldUid:
         try:
             os.chown(newFilePath, oldUid, oldGid)
         except AttributeError:
@@ -423,64 +446,58 @@ def move_file_to_path(path, file):
 
 
 def move_downloads_to_archive(sweeper, configurationManager, recordKeeper):
-    if not configurationManager.get_option_value('archive_downloads'):
+    if not configurationManager.get_option_value("archive_downloads"):
         return
-    downloadConfigTranslator = ConfigKeyTranslator(
-        ConfigKeyTranslator.DOWNLOADS
-    )
+    downloadConfigTranslator = ConfigKeyTranslator(ConfigKeyTranslator.DOWNLOADS)
     archiveConfigTranslator = ConfigKeyTranslator(ConfigKeyTranslator.ARCHIVES)
-    staleFiles = sweeper.get_stale_file_paths(downloadConfigTranslator,
-                                              recordKeeper)
+    staleFiles = sweeper.get_stale_file_paths(downloadConfigTranslator, recordKeeper)
 
     for file in staleFiles:
         for archivePath in configurationManager.get_option_value(
-                archiveConfigTranslator.path_key):
+            archiveConfigTranslator.path_key
+        ):
             try:
                 archivedFilePath = move_file_to_path(archivePath, file)
             except:
                 print("Error moving {0} to archives".format(file.path))
                 continue
 
-            recordKeeper.add_record(archivedFilePath,
-                                    ConfigKeyTranslator.ARCHIVES,
-                                    time.ctime())
+            recordKeeper.add_record(
+                archivedFilePath, ConfigKeyTranslator.ARCHIVES, time.ctime()
+            )
 
-            if not configurationManager.get_option_value(
-                    'move_to_all_archive_dirs'):
+            if not configurationManager.get_option_value("move_to_all_archive_dirs"):
                 break
 
 
 def move_archives_to_purge(sweeper, configurationManager, recordKeeper):
-    if not configurationManager.get_option_value('purge_archives'):
+    if not configurationManager.get_option_value("purge_archives"):
         return
     archiveConfigTranslator = ConfigKeyTranslator(ConfigKeyTranslator.ARCHIVES)
     purgeConfigTranslator = ConfigKeyTranslator(ConfigKeyTranslator.PURGES)
-    staleFiles = sweeper.get_stale_file_paths(archiveConfigTranslator,
-                                              recordKeeper)
+    staleFiles = sweeper.get_stale_file_paths(archiveConfigTranslator, recordKeeper)
 
     for file in staleFiles:
         for purgePath in configurationManager.get_option_value(
-                purgeConfigTranslator.path_key):
-            recordKeeper.delete_record(file.path,
-                                        ConfigKeyTranslator.ARCHIVES)
+            purgeConfigTranslator.path_key
+        ):
+            recordKeeper.delete_record(file.path, ConfigKeyTranslator.ARCHIVES)
             try:
                 purgedFilePath = move_file_to_path(purgePath, file)
             except:
                 print("Error moving {0} to purge".format(file.path))
                 continue
 
-            recordKeeper.add_record(purgedFilePath,
-                                    ConfigKeyTranslator.PURGES,
-                                    time.ctime())
-            if not configurationManager.get_option_value(
-                    'move_to_all_purge_dirs'):
+            recordKeeper.add_record(
+                purgedFilePath, ConfigKeyTranslator.PURGES, time.ctime()
+            )
+            if not configurationManager.get_option_value("move_to_all_purge_dirs"):
                 break
 
 
 def delete_from_purge(sweeper, configurationMangager, recordKeeper):
     purgeConfigTranslator = ConfigKeyTranslator(ConfigKeyTranslator.PURGES)
-    staleFiles = sweeper.get_stale_file_paths(purgeConfigTranslator,
-                                              recordKeeper)
+    staleFiles = sweeper.get_stale_file_paths(purgeConfigTranslator, recordKeeper)
 
     # Delete all stale purge files
     for file in staleFiles:
@@ -488,14 +505,15 @@ def delete_from_purge(sweeper, configurationMangager, recordKeeper):
 
 
 def is_zip_extension(extension):
-    return extension in ['.zip']
+    return extension in [".zip"]
 
 
 def zip_path(filePath):
-    zipPath = '{}.zip'.format(filePath)
-    with ZipFile(zipPath, 'w') as zipFile:
+    zipPath = "{}.zip".format(filePath)
+    with ZipFile(zipPath, "w") as zipFile:
         zipFile.write(filePath)
     return zipPath
+
 
 def remove_path(path):
     if os.path.isfile(path):
@@ -503,10 +521,10 @@ def remove_path(path):
     else:
         shutil.rmtree(path)
 
+
 def compress_archive_files(configurationManager, recordKeeper):
     # For now there will be no compression method available except for ZIP
-    for filePath in recordKeeper.get_filepaths_in_type(
-            ConfigKeyTranslator.ARCHIVES)[:]:
+    for filePath in recordKeeper.get_filepaths_in_type(ConfigKeyTranslator.ARCHIVES)[:]:
         fileExtension = os.path.splitext(filePath)[1]
         if not is_zip_extension(fileExtension):
             try:
@@ -515,11 +533,10 @@ def compress_archive_files(configurationManager, recordKeeper):
                 recordedDatetime = recordKeeper.get_record(
                     ConfigKeyTranslator.ARCHIVES, filePath
                 )
-                recordKeeper.delete_record(filePath,
-                                           ConfigKeyTranslator.ARCHIVES)
-                recordKeeper.add_record(zipPath,
-                                        ConfigKeyTranslator.ARCHIVES,
-                                        recordedDatetime)
+                recordKeeper.delete_record(filePath, ConfigKeyTranslator.ARCHIVES)
+                recordKeeper.add_record(
+                    zipPath, ConfigKeyTranslator.ARCHIVES, recordedDatetime
+                )
             except Exception:
                 continue
 
@@ -527,9 +544,9 @@ def compress_archive_files(configurationManager, recordKeeper):
 def load_untracked_archives_into_record(sweeper, records):
     archiveConfigTranslator = ConfigKeyTranslator(ConfigKeyTranslator.ARCHIVES)
     archivedFiles, archivedDirs = sweeper.get_all_file_paths(archiveConfigTranslator)
-    add_unknown_files_to_record(ConfigKeyTranslator.ARCHIVES,
-                                records,
-                                archivedFiles + archivedDirs)
+    add_unknown_files_to_record(
+        ConfigKeyTranslator.ARCHIVES, records, archivedFiles + archivedDirs
+    )
 
 
 def load_untracked_purges_into_record(sweeper, records):
@@ -545,6 +562,7 @@ def add_unknown_files_to_record(locationType, records, paths):
         if not records.record_exists(locationType, path):
             records.add_record(path, locationType, time.ctime())
 
+
 def main():
     # Parse the arguments
     parsed_args = argParser.parse_args()
@@ -556,20 +574,19 @@ def main():
     load_untracked_archives_into_record(sweeperObj, records)
     load_untracked_purges_into_record(sweeperObj, records)
 
-    if configMgr.get_option_value('archive_downloads'):
+    if configMgr.get_option_value("archive_downloads"):
         move_downloads_to_archive(sweeperObj, configMgr, records)
 
-    if configMgr.get_option_value('compress_archives'):
+    if configMgr.get_option_value("compress_archives"):
         compress_archive_files(configMgr, records)
 
-    if configMgr.get_option_value('purge_archives'):
+    if configMgr.get_option_value("purge_archives"):
         move_archives_to_purge(sweeperObj, configMgr, records)
 
-    if configMgr.get_option_value('delete_from_purge'):
+    if configMgr.get_option_value("delete_from_purge"):
         delete_from_purge(sweeperObj, configMgr, records)
 
     records.write_records()
-
 
 
 if __name__ == "__main__":
